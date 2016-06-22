@@ -17,7 +17,6 @@
 namespace DeJson
 {
     using System;
-    using System.Collections;
     using System.Collections.Generic;
     using System.Linq;
     using System.Linq.Expressions;
@@ -45,18 +44,21 @@ namespace DeJson
         public static Importer<T[]> CreateArrayImporter<T>(this Importer<T> importer)
         {
             if (importer == null) throw new ArgumentNullException(nameof(importer));
-            return Importer.Create(reader =>
+            return Importer.Create(CreateArrayImporterCore(importer.Import));
+        }
+
+        static Func<JsonReader, T[]> CreateArrayImporterCore<T>(Func<JsonReader, T> importer) =>
+            reader =>
             {
                 if (!reader.MoveToContent())
                     throw new Exception();
                 reader.ReadToken(JsonTokenClass.Array);
                 var list = new List<T>();
                 while (reader.TokenClass != JsonTokenClass.EndArray)
-                    list.Add(importer.Import(reader));
+                    list.Add(importer(reader));
                 reader.Read();
                 return list.ToArray();
-            });
-        }
+            };
 
         public static Importer<T> CreateImporter<T>(Expression<Func<T>> prototype) =>
             Importer.Create(CreateImporterCore(prototype));
@@ -104,11 +106,11 @@ namespace DeJson
                 select p.New != null
                      ? CreateImporterLambda(p.New, p.New.Type, map)
                      : p.Array != null
-                     ? CreateArrayImporterLambda(p.Array.Type.GetElementType(), CreateImporterLambda(p.Array.Expressions.Cast<NewExpression>().Single(), p.Array.Type.GetElementType(), map), map).Compile()
+                     ? CreateArrayImporterLambda(p.Array.Type.GetElementType(), CreateImporterLambda(p.Array.Expressions.Cast<NewExpression>().Single(), p.Array.Type.GetElementType(), map)).Compile()
                      : p.Const == null
                      ? null // TODO
                      : p.Const.Type.IsArray
-                     ? CreateArrayImporterLambda(p.Const.Type.GetElementType(), map.GetValue(p.Property.PropertyType.GetElementType(), CannotImportTypeError), map).Compile()
+                     ? CreateArrayImporterLambda(p.Const.Type.GetElementType(), map.GetValue(p.Property.PropertyType.GetElementType(), CannotImportTypeError)).Compile()
                      : map.GetValue(p.Property.PropertyType, CannotImportTypeError);
 
             readers = readers.ToArray();
@@ -147,34 +149,17 @@ namespace DeJson
             return importer;
         }
 
-        static LambdaExpression CreateArrayImporterLambda(Type type, Delegate del, IDictionary<Type, Delegate> map)
+        static readonly MethodInfo CreateArrayImporterCoreGenericMethodDefinition =
+            new Func<Func<JsonReader, int>, Func<JsonReader, int[]>>(CreateArrayImporterCore).Method.GetGenericMethodDefinition();
+
+        static LambdaExpression CreateArrayImporterLambda(Type type, Delegate del)
         {
+            var dels = CreateArrayImporterCoreGenericMethodDefinition.MakeGenericMethod(type).Invoke(null, new object[] { del });
             var reader = Expression.Parameter(typeof(JsonReader));
-            var tokener = Expression.Variable(typeof(IEnumerator<int>));
-            var listType = typeof(List<>).MakeGenericType(type);
-            var add = listType.GetMethod(nameof(List<object>.Add), new[] { type });
-            var list = Expression.Variable(listType);
-
-            var arrayType = type.MakeArrayType();
-            var breakLabel = Expression.Label(listType);
-
-            var body =
-                Expression.Block(arrayType, new[] { tokener, list },
-                    Expression.Assign(list, Expression.New(listType)),
-                    Expression.Assign(tokener, Expression.Call(ElementsMethod, reader)),
-                    Expression.Loop(
-                        Expression.IfThenElse(
-                            Expression.Call(tokener, EnumeratorMoveNext),
-                            Expression.Call(list, add, Expression.Invoke(Expression.Constant(del), reader)),
-                            Expression.Break(breakLabel, list)
-                        ),
-                        breakLabel),
-                    Expression.Call(list, listType.GetMethod(nameof(List<object>.ToArray), Type.EmptyTypes)));
-            return Expression.Lambda(typeof(Func<,>).MakeGenericType(typeof(JsonReader), arrayType), Expression.Block(arrayType, body), reader);
+            var body = Expression.Invoke(Expression.Constant(dels), reader);
+            var lambdaType = typeof(Func<,>).MakeGenericType(typeof(JsonReader), type.MakeArrayType());
+            return Expression.Lambda(lambdaType, body, reader);
         }
-
-        static readonly MethodInfo EnumeratorMoveNext = Reflector.Method((IEnumerator e) => e.MoveNext());
-        static readonly MethodInfo ElementsMethod = new Func<JsonReader, IEnumerator<int>>(Elements).Method;
 
         static IEnumerator<string> Members(JsonReader reader)
         {
@@ -184,17 +169,6 @@ namespace DeJson
             while (reader.TokenClass == JsonTokenClass.Member)
                 yield return reader.ReadMember();
             reader.ReadToken(JsonTokenClass.EndObject);
-            // TODO consider asserting depth on entry/exit
-        }
-
-        static IEnumerator<int> Elements(JsonReader reader)
-        {
-            if (!reader.MoveToContent())
-                throw new Exception();
-            reader.ReadToken(JsonTokenClass.Array);
-            for (var i = 0; reader.TokenClass != JsonTokenClass.EndArray; i++)
-                yield return i;
-            reader.ReadToken(JsonTokenClass.EndArray);
             // TODO consider asserting depth on entry/exit
         }
 
