@@ -37,17 +37,13 @@ namespace DeJson
         internal T Import(JsonReader reader) => _impl(reader);
         public T Import(string json) => _impl(ReadJson(json));
         static JsonReader ReadJson(string json) => JsonText.CreateReader(json);
+        public Importer<T[]> ToArrayImporter() =>
+            Importer.Create(JsonImport.CreateArrayImporter(Import));
     }
 
     public static partial class JsonImport
     {
-        public static Importer<T[]> CreateArrayImporter<T>(this Importer<T> importer)
-        {
-            if (importer == null) throw new ArgumentNullException(nameof(importer));
-            return Importer.Create(CreateArrayImporter(importer.Import));
-        }
-
-        static Func<JsonReader, T[]> CreateArrayImporter<T>(Func<JsonReader, T> importer) =>
+        internal static Func<JsonReader, T[]> CreateArrayImporter<T>(Func<JsonReader, T> importer) =>
             reader =>
             {
                 if (!reader.MoveToContent())
