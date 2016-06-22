@@ -44,10 +44,10 @@ namespace DeJson
         public static Importer<T[]> CreateArrayImporter<T>(this Importer<T> importer)
         {
             if (importer == null) throw new ArgumentNullException(nameof(importer));
-            return Importer.Create(CreateArrayImporterCore(importer.Import));
+            return Importer.Create(CreateArrayImporter(importer.Import));
         }
 
-        static Func<JsonReader, T[]> CreateArrayImporterCore<T>(Func<JsonReader, T> importer) =>
+        static Func<JsonReader, T[]> CreateArrayImporter<T>(Func<JsonReader, T> importer) =>
             reader =>
             {
                 if (!reader.MoveToContent())
@@ -106,11 +106,11 @@ namespace DeJson
                 select p.New != null
                      ? CreateImporterLambda(p.New, p.New.Type, map)
                      : p.Array != null
-                     ? CreateArrayImporterLambda(p.Array.Type.GetElementType(), CreateImporterLambda(p.Array.Expressions.Cast<NewExpression>().Single(), p.Array.Type.GetElementType(), map)).Compile()
+                     ? CreateArrayImporter(p.Array.Type.GetElementType(), CreateImporterLambda(p.Array.Expressions.Cast<NewExpression>().Single(), p.Array.Type.GetElementType(), map))
                      : p.Const == null
                      ? null // TODO
                      : p.Const.Type.IsArray
-                     ? CreateArrayImporterLambda(p.Const.Type.GetElementType(), map.GetValue(p.Property.PropertyType.GetElementType(), CannotImportTypeError)).Compile()
+                     ? CreateArrayImporter(p.Const.Type.GetElementType(), map.GetValue(p.Property.PropertyType.GetElementType(), CannotImportTypeError))
                      : map.GetValue(p.Property.PropertyType, CannotImportTypeError);
 
             readers = readers.ToArray();
@@ -150,16 +150,13 @@ namespace DeJson
         }
 
         static readonly MethodInfo CreateArrayImporterCoreGenericMethodDefinition =
-            new Func<Func<JsonReader, int>, Func<JsonReader, int[]>>(CreateArrayImporterCore).Method.GetGenericMethodDefinition();
+            new Func<Func<JsonReader, int>, Func<JsonReader, int[]>>(CreateArrayImporter).Method.GetGenericMethodDefinition();
 
-        static LambdaExpression CreateArrayImporterLambda(Type type, Delegate del)
-        {
-            var dels = CreateArrayImporterCoreGenericMethodDefinition.MakeGenericMethod(type).Invoke(null, new object[] { del });
-            var reader = Expression.Parameter(typeof(JsonReader));
-            var body = Expression.Invoke(Expression.Constant(dels), reader);
-            var lambdaType = typeof(Func<,>).MakeGenericType(typeof(JsonReader), type.MakeArrayType());
-            return Expression.Lambda(lambdaType, body, reader);
-        }
+        static Delegate CreateArrayImporter(Type type, Delegate del) =>
+            (Delegate)
+                CreateArrayImporterCoreGenericMethodDefinition
+                    .MakeGenericMethod(type)
+                    .Invoke(null, new object[] { del });
 
         static IEnumerator<string> Members(JsonReader reader)
         {
