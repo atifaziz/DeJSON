@@ -25,25 +25,43 @@ namespace DeJson
     using Jayrock.Json;
     using Mannex.Collections.Generic;
 
+    static class Importer
+    {
+        internal static Importer<T> Create<T>(Func<JsonReader, T> func) =>
+            new Importer<T>(func);
+    }
+
+    public sealed class Importer<T>
+    {
+        readonly Func<JsonReader, T> _impl;
+        public Importer(Func<JsonReader, T> impl) { _impl = impl; }
+        internal T Import(JsonReader reader) => _impl(reader);
+        public T Import(string json) => _impl(ReadJson(json));
+        static JsonReader ReadJson(string json) => JsonText.CreateReader(json);
+    }
+
     public static partial class JsonImport
     {
-        public static Func<JsonReader, T[]> CreateArrayImporter<T>(this Func<JsonReader, T> importer)
+        public static Importer<T[]> CreateArrayImporter<T>(this Importer<T> importer)
         {
             if (importer == null) throw new ArgumentNullException(nameof(importer));
-            return reader =>
+            return Importer.Create(reader =>
             {
                 if (!reader.MoveToContent())
                     throw new Exception();
                 reader.ReadToken(JsonTokenClass.Array);
                 var list = new List<T>();
                 while (reader.TokenClass != JsonTokenClass.EndArray)
-                    list.Add(importer(reader));
+                    list.Add(importer.Import(reader));
                 reader.Read();
                 return list.ToArray();
-            };
+            });
         }
 
-        public static Func<JsonReader, T> CreateImporter<T>(Expression<Func<T>> prototype) =>
+        public static Importer<T> CreateImporter<T>(Expression<Func<T>> prototype) =>
+            Importer.Create(CreateImporterCore(prototype));
+
+        static Func<JsonReader, T> CreateImporterCore<T>(Expression<Func<T>> prototype) =>
             CreateImporter(prototype, new Delegate[]
             {
                 new Func<JsonReader, bool   >(ImportBoolean   ),
@@ -60,7 +78,7 @@ namespace DeJson
             }
             .ToDictionary(e => e.GetType().GetGenericArguments().Last(), e => e));
 
-        public static Func<JsonReader, T> CreateImporter<T>(Expression<Func<T>> prototype, IDictionary<Type, Delegate> map)
+        static Func<JsonReader, T> CreateImporter<T>(Expression<Func<T>> prototype, IDictionary<Type, Delegate> map)
         {
             if (prototype == null) throw new ArgumentNullException(nameof(prototype));
             var newExpression = prototype.Body as NewExpression;
@@ -158,26 +176,7 @@ namespace DeJson
         static readonly MethodInfo EnumeratorMoveNext = Reflector.Method((IEnumerator e) => e.MoveNext());
         static readonly MethodInfo ElementsMethod = new Func<JsonReader, IEnumerator<int>>(Elements).Method;
 
-        public static IEnumerator<int> Members(JsonReader reader, IDictionary<string, int> map)
-        {
-            if (!reader.MoveToContent())
-                throw new Exception();
-            reader.ReadToken(JsonTokenClass.Object);
-            while (reader.TokenClass == JsonTokenClass.Member)
-            {
-                var name = reader.Text;
-                reader.Read();
-                int index;
-                if (map.TryGetValue(name, out index))
-                    yield return index;
-                else
-                    reader.Skip();
-            }
-            reader.ReadToken(JsonTokenClass.EndObject);
-            // TODO consider asserting depth on entry/exit
-        }
-
-        public static IEnumerator<string> Members(JsonReader reader)
+        static IEnumerator<string> Members(JsonReader reader)
         {
             if (!reader.MoveToContent())
                 throw new Exception();
@@ -188,7 +187,7 @@ namespace DeJson
             // TODO consider asserting depth on entry/exit
         }
 
-        public static IEnumerator<int> Elements(JsonReader reader)
+        static IEnumerator<int> Elements(JsonReader reader)
         {
             if (!reader.MoveToContent())
                 throw new Exception();
@@ -199,18 +198,31 @@ namespace DeJson
             // TODO consider asserting depth on entry/exit
         }
 
-        public static bool    ImportBoolean(JsonReader reader)    => reader.ReadBoolean();
-        public static bool?   TryImportBoolean(JsonReader reader) => TryImportNullable(reader, ImportBoolean);
-        public static int     ImportInt32(JsonReader reader)      => reader.ReadNumber().ToInt32();
-        public static int?    TryImportInt32(JsonReader reader)   => TryImportNullable(reader, ImportInt32);
-        public static long    ImportInt64(JsonReader reader)      => reader.ReadNumber().ToInt64();
-        public static long?   TryImportInt64(JsonReader reader)   => TryImportNullable(reader, ImportInt64);
-        public static float   ImportSingle(JsonReader reader)     => reader.ReadNumber().ToSingle();
-        public static float?  TryImportSingle(JsonReader reader)  => TryImportNullable(reader, ImportSingle);
-        public static double  ImportDouble(JsonReader reader)     => reader.ReadNumber().ToDouble();
-        public static double? TryImportDouble(JsonReader reader)  => TryImportNullable(reader, ImportDouble);
-        public static string  ImportString(JsonReader reader)     => reader.ReadString();
-        public static string  TryImportString(JsonReader reader)  => TryImport(reader, ImportString);
+        public static Importer<bool   > BooleanImporter    = Importer.Create(ImportBoolean   );
+        public static Importer<bool?  > OptBooleanImporter = Importer.Create(TryImportBoolean);
+        public static Importer<int    > Int32Importer      = Importer.Create(ImportInt32     );
+        public static Importer<int?   > OptInt32Importer   = Importer.Create(TryImportInt32  );
+        public static Importer<long   > Int64Importer      = Importer.Create(ImportInt64     );
+        public static Importer<long?  > OptInt64Importer   = Importer.Create(TryImportInt64  );
+        public static Importer<float  > SingleImporter     = Importer.Create(ImportSingle    );
+        public static Importer<float? > OptSingleImporter  = Importer.Create(TryImportSingle );
+        public static Importer<double > DoubleImporter     = Importer.Create(ImportDouble    );
+        public static Importer<double?> OptDoubleImporter  = Importer.Create(TryImportDouble );
+        public static Importer<string > StringImporter     = Importer.Create(ImportString    );
+        public static Importer<string > OptStringImporter  = Importer.Create(TryImportString );
+
+        static bool    ImportBoolean(JsonReader reader)    => reader.ReadBoolean();
+        static bool?   TryImportBoolean(JsonReader reader) => TryImportNullable(reader, ImportBoolean);
+        static int     ImportInt32(JsonReader reader)      => reader.ReadNumber().ToInt32();
+        static int?    TryImportInt32(JsonReader reader)   => TryImportNullable(reader, ImportInt32);
+        static long    ImportInt64(JsonReader reader)      => reader.ReadNumber().ToInt64();
+        static long?   TryImportInt64(JsonReader reader)   => TryImportNullable(reader, ImportInt64);
+        static float   ImportSingle(JsonReader reader)     => reader.ReadNumber().ToSingle();
+        static float?  TryImportSingle(JsonReader reader)  => TryImportNullable(reader, ImportSingle);
+        static double  ImportDouble(JsonReader reader)     => reader.ReadNumber().ToDouble();
+        static double? TryImportDouble(JsonReader reader)  => TryImportNullable(reader, ImportDouble);
+        static string  ImportString(JsonReader reader)     => reader.ReadString();
+        static string  TryImportString(JsonReader reader)  => TryImport(reader, ImportString);
 
         static T? TryImportNullable<T>(JsonReader reader, Func<JsonReader, T> selector)
             where T : struct
