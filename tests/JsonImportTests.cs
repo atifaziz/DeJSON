@@ -183,5 +183,34 @@ namespace DeJson.Tests
                 z = 56.78,
             }));
         }
+
+        [Test]
+        public void ImportJsonObject()
+        {
+            var importer = JsonImport.CreateImporter(() => new
+            {
+                pt = default(JsonObject),
+                label = default(string),
+            });
+
+            var obj = importer.Import("{ pt: { x: 12, y: 34, z: 56.78 }, label: foobar }");
+
+            Assert.That(obj.label, Is.EqualTo("foobar"));
+            Assert.That(obj.pt.Count, Is.EqualTo(3));
+
+            var pt = obj.pt.GetEnumerator();
+
+            Assert.That(pt.MoveNext(), Is.True);
+            Assert.That(pt.Current.Key, Is.EqualTo("x"));
+            Assert.That(pt.Current.Value.Import(JsonImport.Int32Importer), Is.EqualTo(12));
+
+            Assert.That(pt.MoveNext(), Is.True);
+            Assert.That(pt.Current.Key, Is.EqualTo("y"));
+            Assert.That(pt.Current.Value.Import(JsonImport.Int32Importer), Is.EqualTo(34));
+
+            Assert.That(pt.MoveNext(), Is.True);
+            Assert.That(pt.Current.Key, Is.EqualTo("z"));
+            Assert.That(pt.Current.Value.Import(JsonImport.DoubleImporter), Is.EqualTo(56.78));
+        }
     }
 }

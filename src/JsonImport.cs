@@ -138,18 +138,19 @@ namespace DeJson
         {
             var importers = new Delegate[]
             {
-                new Func<JsonReader, bool>      (ImportBoolean   ),
-                new Func<JsonReader, int>       (ImportInt32     ),
-                new Func<JsonReader, long>      (ImportInt64     ),
-                new Func<JsonReader, float>     (ImportSingle    ),
-                new Func<JsonReader, double>    (ImportDouble    ),
-                new Func<JsonReader, string>    (TryImportString ),
-                new Func<JsonReader, bool?>     (TryImportBoolean),
-                new Func<JsonReader, int?>      (TryImportInt32  ),
-                new Func<JsonReader, long?>     (TryImportInt64  ),
-                new Func<JsonReader, float?>    (TryImportSingle ),
-                new Func<JsonReader, double?>   (TryImportDouble ),
-                new Func<JsonReader, JsonBuffer>(ImportJson      ),
+                new Func<JsonReader, bool>      (ImportBoolean    ),
+                new Func<JsonReader, int>       (ImportInt32      ),
+                new Func<JsonReader, long>      (ImportInt64      ),
+                new Func<JsonReader, float>     (ImportSingle     ),
+                new Func<JsonReader, double>    (ImportDouble     ),
+                new Func<JsonReader, string>    (TryImportString  ),
+                new Func<JsonReader, bool?>     (TryImportBoolean ),
+                new Func<JsonReader, int?>      (TryImportInt32   ),
+                new Func<JsonReader, long?>     (TryImportInt64   ),
+                new Func<JsonReader, float?>    (TryImportSingle  ),
+                new Func<JsonReader, double?>   (TryImportDouble  ),
+                new Func<JsonReader, JsonBuffer>(ImportJson       ),
+                new Func<JsonReader, JsonObject>(JsonObject.Import),
             };
 
             var importerByType = importers.ToDictionary(e => e.GetType().GetGenericArguments().Last(), e => e);
@@ -171,6 +172,7 @@ namespace DeJson
         public static Importer<string>     OptStringImporter  = Importer.Create(TryImportString);
 
         public static Importer<JsonBuffer> JsonImporter       = Importer.Create(ImportJson);
+        public static Importer<JsonObject> JsonObjectImporter = Importer.Create(JsonObject.Import);
 
         static bool    ImportBoolean(JsonReader reader)    => reader.ReadBoolean();
         static int     ImportInt32(JsonReader reader)      => reader.ReadNumber().ToInt32();
