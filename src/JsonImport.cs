@@ -44,7 +44,6 @@ namespace DeJson
         public static Importer<T> CreateImporter<T>(Expression<Func<T>> prototype) =>
             Importer.Create(CreateImporterCore(prototype));
 
-
         static Func<JsonReader, T> CreateImporterCore<T>(Expression<Func<T>> prototype) =>
             CreateImporter(prototype, ImporterMapper);
 
@@ -189,7 +188,7 @@ namespace DeJson
         static string  TryImportString(JsonReader reader)  => TryImport(reader, ImportString);
 
         static JsonValue ImportJson(JsonReader reader) =>
-            new JsonValue(Jayrock.Json.JsonBuffer.From(reader));
+            new JsonValue(JsonBuffer.From(reader));
 
         static T? TryImportNullable<T>(JsonReader reader, Func<JsonReader, T> selector)
             where T : struct
