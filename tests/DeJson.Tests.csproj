@@ -40,6 +40,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="JsonImportTests.cs" />
+    <Compile Include="JsonObjectTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Properties\" />

@@ -60,6 +60,7 @@
       <DependentUpon>JsonImport.g.tt</DependentUpon>
     </Compile>
     <Compile Include="MoreLinq\MoreEnumerable.Index.cs" />
+    <Compile Include="JsonObject.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="JsonImport.g.tt">
