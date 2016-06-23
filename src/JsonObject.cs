@@ -22,13 +22,12 @@ namespace DeJson
     using System.Linq;
     using Jayrock.Json;
     using Mannex.Collections.Generic;
-    using JayrockJsonBuffer = Jayrock.Json.JsonBuffer;
 
-    public sealed class JsonObject : IList<KeyValuePair<string, JsonBuffer>>
+    public sealed class JsonObject : IList<KeyValuePair<string, JsonValue>>
     {
-        readonly KeyValuePair<string, JayrockJsonBuffer>[] _members;
+        readonly KeyValuePair<string, JsonBuffer>[] _members;
 
-        public JsonObject(KeyValuePair<string, JayrockJsonBuffer>[] members)
+        public JsonObject(KeyValuePair<string, JsonBuffer>[] members)
         {
             if (members == null) throw new ArgumentNullException(nameof(members));
             _members = members;
@@ -46,13 +45,13 @@ namespace DeJson
                 reader.ReadNull();
                 return null;
             }
-            KeyValuePair<string, JayrockJsonBuffer>[] members = null;
+            KeyValuePair<string, JsonBuffer>[] members = null;
             reader.ReadToken(JsonTokenClass.Object);
             var count = 0;
             for (; reader.TokenClass != JsonTokenClass.EndObject; count++)
             {
                 var name = reader.ReadMember();
-                var value = JayrockJsonBuffer.From(reader);
+                var value = JsonBuffer.From(reader);
                 if (members == null || count >= members.Length)
                     Array.Resize(ref members, members?.Length * 2 ?? 4);
                 members[count] = name.AsKeyTo(value);
@@ -64,18 +63,18 @@ namespace DeJson
 
         public int Count => _members.Length;
 
-        public KeyValuePair<string, JsonBuffer> this[int index]
+        public KeyValuePair<string, JsonValue> this[int index]
         {
             get
             {
                 if (index < 0 || index >= Count)
                     throw new ArgumentOutOfRangeException(nameof(index), index, null);
                 var member = _members[index];
-                return member.Key.AsKeyTo(new JsonBuffer(member.Value));
+                return member.Key.AsKeyTo(new JsonValue(member.Value));
             }
         }
 
-        public JsonBuffer this[string name]
+        public JsonValue this[string name]
         {
             get
             {
@@ -87,12 +86,12 @@ namespace DeJson
         }
 
         public IEnumerable<string> Names => from m in _members select m.Key;
-        public IEnumerable<JsonBuffer> Values => from m in this select m.Value;
+        public IEnumerable<JsonValue> Values => from m in this select m.Value;
 
-        public JsonBuffer? Find(string name)
+        public JsonValue? Find(string name)
         {
             var i = IndexOf(name);
-            return i >= 0 ? new JsonBuffer(_members[i].Value) : null as JsonBuffer?;
+            return i >= 0 ? new JsonValue(_members[i].Value) : null as JsonValue?;
         }
 
         public bool Contains(string name) => IndexOf(name) >= 0;
@@ -108,46 +107,46 @@ namespace DeJson
             return -1;
         }
 
-        public IEnumerator<KeyValuePair<string, JsonBuffer>> GetEnumerator()
+        public IEnumerator<KeyValuePair<string, JsonValue>> GetEnumerator()
         {
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var member in _members)
-                yield return member.Key.AsKeyTo(new JsonBuffer(member.Value));
+                yield return member.Key.AsKeyTo(new JsonValue(member.Value));
         }
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-        bool ICollection<KeyValuePair<string, JsonBuffer>>.IsReadOnly => true;
+        bool ICollection<KeyValuePair<string, JsonValue>>.IsReadOnly => true;
 
-        bool ICollection<KeyValuePair<string, JsonBuffer>>.Contains(KeyValuePair<string, JsonBuffer> item) =>
+        bool ICollection<KeyValuePair<string, JsonValue>>.Contains(KeyValuePair<string, JsonValue> item) =>
             IndexOf(item) >= 0;
 
-        int IList<KeyValuePair<string, JsonBuffer>>.IndexOf(KeyValuePair<string, JsonBuffer> item) =>
+        int IList<KeyValuePair<string, JsonValue>>.IndexOf(KeyValuePair<string, JsonValue> item) =>
             IndexOf(item);
 
-        int IndexOf(KeyValuePair<string, JsonBuffer> item)
+        int IndexOf(KeyValuePair<string, JsonValue> item)
         {
             var i = IndexOf(item.Key);
             return i >= 0 && this[i].Value.Equals(item.Value) ? i : 0;
         }
 
-        KeyValuePair<string, JsonBuffer> IList<KeyValuePair<string, JsonBuffer>>.this[int index]
+        KeyValuePair<string, JsonValue> IList<KeyValuePair<string, JsonValue>>.this[int index]
         {
             get { return this[index]; }
             // ReSharper disable once ValueParameterNotUsed
             set { ThrowReadOnlyError(); }
         }
 
-        void ICollection<KeyValuePair<string, JsonBuffer>>.CopyTo(KeyValuePair<string, JsonBuffer>[] array, int arrayIndex) =>
+        void ICollection<KeyValuePair<string, JsonValue>>.CopyTo(KeyValuePair<string, JsonValue>[] array, int arrayIndex) =>
             this.ToArray().CopyTo(array, arrayIndex);
 
         static void ThrowReadOnlyError() { throw new InvalidOperationException("Collection is read-only"); }
         static T ThrowReadOnlyError<T>() { ThrowReadOnlyError(); return default(T); }
 
-        void ICollection<KeyValuePair<string, JsonBuffer>>.Add(KeyValuePair<string, JsonBuffer> item) => ThrowReadOnlyError();
-        void ICollection<KeyValuePair<string, JsonBuffer>>.Clear() => ThrowReadOnlyError();
-        void IList<KeyValuePair<string, JsonBuffer>>.Insert(int index, KeyValuePair<string, JsonBuffer> item) => ThrowReadOnlyError();
-        bool ICollection<KeyValuePair<string, JsonBuffer>>.Remove(KeyValuePair<string, JsonBuffer> item) => ThrowReadOnlyError<bool>();
-        void IList<KeyValuePair<string, JsonBuffer>>.RemoveAt(int index) => ThrowReadOnlyError();
+        void ICollection<KeyValuePair<string, JsonValue>>.Add(KeyValuePair<string, JsonValue> item) => ThrowReadOnlyError();
+        void ICollection<KeyValuePair<string, JsonValue>>.Clear() => ThrowReadOnlyError();
+        void IList<KeyValuePair<string, JsonValue>>.Insert(int index, KeyValuePair<string, JsonValue> item) => ThrowReadOnlyError();
+        bool ICollection<KeyValuePair<string, JsonValue>>.Remove(KeyValuePair<string, JsonValue> item) => ThrowReadOnlyError<bool>();
+        void IList<KeyValuePair<string, JsonValue>>.RemoveAt(int index) => ThrowReadOnlyError();
     }
 }

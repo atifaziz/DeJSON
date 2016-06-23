@@ -19,13 +19,13 @@ namespace DeJson
     using System;
     using Jayrock.Json;
 
-    public struct JsonBuffer : IEquatable<JsonBuffer>
+    public struct JsonValue : IEquatable<JsonValue>
     {
-        readonly Jayrock.Json.JsonBuffer _buffer;
+        readonly JsonBuffer _buffer;
 
-        internal JsonBuffer(Jayrock.Json.JsonBuffer buffer) { _buffer = buffer; }
+        internal JsonValue(JsonBuffer buffer) { _buffer = buffer; }
 
-        public static readonly JsonBuffer Empty = new JsonBuffer();
+        public static readonly JsonValue Empty = new JsonValue();
 
         public bool IsEmpty      => _buffer.IsEmpty;
         public bool IsNull       => _buffer.IsNull;
@@ -48,11 +48,11 @@ namespace DeJson
             _buffer.GetHashCode();
 
         // ReSharper disable once ImpureMethodCallOnReadonlyValueField
-        public bool Equals(JsonBuffer other) =>
+        public bool Equals(JsonValue other) =>
             _buffer.Equals(other._buffer);
 
         public override bool Equals(object obj) =>
-            obj is JsonBuffer && Equals((JsonBuffer) obj);
+            obj is JsonValue && Equals((JsonValue) obj);
 
         public override string ToString() => _buffer.ToString();
 

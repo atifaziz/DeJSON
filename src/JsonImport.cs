@@ -149,7 +149,7 @@ namespace DeJson
                 new Func<JsonReader, long?>     (TryImportInt64   ),
                 new Func<JsonReader, float?>    (TryImportSingle  ),
                 new Func<JsonReader, double?>   (TryImportDouble  ),
-                new Func<JsonReader, JsonBuffer>(ImportJson       ),
+                new Func<JsonReader, JsonValue>(ImportJson       ),
                 new Func<JsonReader, JsonObject>(JsonObject.Import),
             };
 
@@ -171,7 +171,7 @@ namespace DeJson
         public static Importer<double?>    OptDoubleImporter  = Importer.Create(TryImportDouble);
         public static Importer<string>     OptStringImporter  = Importer.Create(TryImportString);
 
-        public static Importer<JsonBuffer> JsonImporter       = Importer.Create(ImportJson);
+        public static Importer<JsonValue> JsonImporter       = Importer.Create(ImportJson);
         public static Importer<JsonObject> JsonObjectImporter = Importer.Create(JsonObject.Import);
 
         static bool    ImportBoolean(JsonReader reader)    => reader.ReadBoolean();
@@ -188,8 +188,8 @@ namespace DeJson
         static double? TryImportDouble(JsonReader reader)  => TryImportNullable(reader, ImportDouble);
         static string  TryImportString(JsonReader reader)  => TryImport(reader, ImportString);
 
-        static JsonBuffer ImportJson(JsonReader reader) =>
-            new JsonBuffer(Jayrock.Json.JsonBuffer.From(reader));
+        static JsonValue ImportJson(JsonReader reader) =>
+            new JsonValue(Jayrock.Json.JsonBuffer.From(reader));
 
         static T? TryImportNullable<T>(JsonReader reader, Func<JsonReader, T> selector)
             where T : struct

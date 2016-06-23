@@ -159,7 +159,7 @@ namespace DeJson.Tests
         {
             var importer = JsonImport.CreateImporter(() => new
             {
-                pt = default(JsonBuffer),
+                pt = default(JsonValue),
                 label = default(string),
             });
 
