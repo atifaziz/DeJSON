@@ -153,5 +153,35 @@ namespace DeJson.Tests
             var result = importer.Import("[123, 456, 789]");
             Assert.That(result, Is.EquivalentTo(new[] { 123, 456, 789 }));
         }
+
+        [Test]
+        public void ImportJson()
+        {
+            var importer = JsonImport.CreateImporter(() => new
+            {
+                pt = default(JsonBuffer),
+                label = default(string),
+            });
+
+            var obj = importer.Import("{ pt: { x: 12, y: 34, z: 56.78 }, label: foobar }");
+
+            Assert.That(obj.label, Is.EqualTo("foobar"));
+
+            var pointImporter = JsonImport.CreateImporter(() => new
+            {
+                x = default(int),
+                y = default(int?),
+                z = default(double),
+            });
+
+            var pt = pointImporter.Import(obj.pt);
+
+            Assert.That(pt, Is.EqualTo(new
+            {
+                x = 12,
+                y = 34 as int?,
+                z = 56.78,
+            }));
+        }
     }
 }

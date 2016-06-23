@@ -31,6 +31,7 @@ namespace DeJson
         public Importer(Func<JsonReader, T> impl) { _impl = impl; }
         internal T Import(JsonReader reader) => _impl(reader);
         public T Import(string json) => _impl(ReadJson(json));
+        public T Import(JsonBuffer json) => _impl(json.CreateReader());
         static JsonReader ReadJson(string json) => JsonText.CreateReader(json);
         public Importer<T[]> ToArrayImporter() =>
             Importer.Create(JsonImport.CreateArrayImporter(Import));
