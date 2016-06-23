@@ -26,6 +26,8 @@ namespace DeJson
 
     public static partial class JsonImport
     {
+        static readonly Func<Type, Delegate> ImporterMapper;
+
         internal static Func<JsonReader, T[]> CreateArrayImporter<T>(Func<JsonReader, T> importer) =>
             reader =>
             {
@@ -42,37 +44,20 @@ namespace DeJson
         public static Importer<T> CreateImporter<T>(Expression<Func<T>> prototype) =>
             Importer.Create(CreateImporterCore(prototype));
 
-        static Func<JsonReader, T> CreateImporterCore<T>(Expression<Func<T>> prototype) =>
-            CreateImporter(prototype, new Delegate[]
-            {
-                new Func<JsonReader, bool>      (ImportBoolean   ),
-                new Func<JsonReader, bool?>     (TryImportBoolean),
-                new Func<JsonReader, int>       (ImportInt32     ),
-                new Func<JsonReader, int?>      (TryImportInt32  ),
-                new Func<JsonReader, long>      (ImportInt64     ),
-                new Func<JsonReader, long?>     (TryImportInt64  ),
-                new Func<JsonReader, float>     (ImportSingle    ),
-                new Func<JsonReader, float?>    (TryImportSingle ),
-                new Func<JsonReader, double>    (ImportDouble    ),
-                new Func<JsonReader, double?>   (TryImportDouble ),
-                new Func<JsonReader, string>    (TryImportString ),
-                new Func<JsonReader, JsonBuffer>(ImportJson      ),
-            }
-            .ToDictionary(e => e.GetType().GetGenericArguments().Last(), e => e));
 
-        static Func<JsonReader, T> CreateImporter<T>(Expression<Func<T>> prototype, IDictionary<Type, Delegate> map)
+        static Func<JsonReader, T> CreateImporterCore<T>(Expression<Func<T>> prototype) =>
+            CreateImporter(prototype, ImporterMapper);
+
+        static Func<JsonReader, T> CreateImporter<T>(Expression<Func<T>> prototype, Func<Type, Delegate> mapper)
         {
             if (prototype == null) throw new ArgumentNullException(nameof(prototype));
             var newExpression = prototype.Body as NewExpression;
             if (newExpression?.Members == null)
                 throw new ArgumentException(null, nameof(prototype));
-            return (Func<JsonReader, T>) CreateImporterLambda(newExpression, typeof(T), map);
+            return (Func<JsonReader, T>) CreateImporterLambda(newExpression, typeof(T), mapper);
         }
 
-        static Exception CannotImportTypeError(Type type) =>
-            new Exception($"Don't know how to import {type.FullName} from JSON.");
-
-        static Delegate CreateImporterLambda(NewExpression @new, Type type, IDictionary<Type, Delegate> map)
+        static Delegate CreateImporterLambda(NewExpression @new, Type type, Func<Type, Delegate> mapper)
         {
             var properties = (@new.Members ?? Enumerable.Empty<MemberInfo>()).Cast<PropertyInfo>().ToArray();
             var readers =
@@ -84,14 +69,14 @@ namespace DeJson
                     Const    = a as ConstantExpression,
                 })
                 select p.New != null
-                     ? CreateImporterLambda(p.New, p.New.Type, map)
+                     ? CreateImporterLambda(p.New, p.New.Type, mapper)
                      : p.Array != null
-                     ? CreateArrayImporter(p.Array.Type.GetElementType(), CreateImporterLambda(p.Array.Expressions.Cast<NewExpression>().Single(), p.Array.Type.GetElementType(), map))
+                     ? CreateArrayImporter(p.Array.Type.GetElementType(), CreateImporterLambda(p.Array.Expressions.Cast<NewExpression>().Single(), p.Array.Type.GetElementType(), mapper))
                      : p.Const == null
                      ? null // TODO
                      : p.Const.Type.IsArray
-                     ? CreateArrayImporter(p.Const.Type.GetElementType(), map.GetValue(p.Property.PropertyType.GetElementType(), CannotImportTypeError))
-                     : map.GetValue(p.Property.PropertyType, CannotImportTypeError);
+                     ? CreateArrayImporter(p.Const.Type.GetElementType(), mapper(p.Property.PropertyType.GetElementType()))
+                     : mapper(p.Property.PropertyType);
 
             readers = readers.ToArray();
 
@@ -147,6 +132,28 @@ namespace DeJson
                 yield return reader.ReadMember();
             reader.ReadToken(JsonTokenClass.EndObject);
             // TODO consider asserting depth on entry/exit
+        }
+
+        static JsonImport()
+        {
+            var importers = new Delegate[]
+            {
+                new Func<JsonReader, bool>      (ImportBoolean   ),
+                new Func<JsonReader, int>       (ImportInt32     ),
+                new Func<JsonReader, long>      (ImportInt64     ),
+                new Func<JsonReader, float>     (ImportSingle    ),
+                new Func<JsonReader, double>    (ImportDouble    ),
+                new Func<JsonReader, string>    (TryImportString ),
+                new Func<JsonReader, bool?>     (TryImportBoolean),
+                new Func<JsonReader, int?>      (TryImportInt32  ),
+                new Func<JsonReader, long?>     (TryImportInt64  ),
+                new Func<JsonReader, float?>    (TryImportSingle ),
+                new Func<JsonReader, double?>   (TryImportDouble ),
+                new Func<JsonReader, JsonBuffer>(ImportJson      ),
+            };
+
+            var importerByType = importers.ToDictionary(e => e.GetType().GetGenericArguments().Last(), e => e);
+            ImporterMapper = type => importerByType.GetValue(type, it => new Exception($"Don't know how to import {it.FullName} from JSON."));
         }
 
         public static Importer<bool>       BooleanImporter    = Importer.Create(ImportBoolean);
