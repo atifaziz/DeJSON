@@ -56,6 +56,17 @@ namespace DeJson
             return (Func<JsonReader, T>) CreateImporterLambda(newExpression, typeof(T), mapper);
         }
 
+        static readonly RuntimeMethodHandle[] CreateImporterMethods =
+            typeof(JsonImport)
+                .FindMembers(MemberTypes.Method, BindingFlags.Static | BindingFlags.NonPublic,
+                             filterCriteria: null,
+                             filter: (m, _) => m.Name == nameof(JsonImport.CreateImporter))
+                .Cast<MethodInfo>()
+                .Where(m => m.IsGenericMethodDefinition)
+                .OrderBy(m => m.GetGenericArguments().Length)
+                .Select(m => m.MethodHandle)
+                .ToArray();
+
         static Delegate CreateImporterLambda(NewExpression @new, Type type, Func<Type, Delegate> mapper)
         {
             var properties = (@new.Members ?? Enumerable.Empty<MemberInfo>()).Cast<PropertyInfo>().ToArray();
@@ -92,13 +103,8 @@ namespace DeJson
                                                        // ReSharper disable once CoVariantArrayConversion
                                                        paramz));
 
-            var importCreatorMethod =
-                typeof(JsonImport)
-                    .FindMembers(MemberTypes.Method, BindingFlags.Static | BindingFlags.NonPublic, filterCriteria: null,
-                                 filter: (m, _) => m.Name == nameof(JsonImport.CreateImporter))
-                    .Cast<MethodInfo>()
-                    .ToArray()
-                    .Single(m => m.GetGenericArguments().Length == lambdaType.GetGenericArguments().Length)
+            var createImporterCreatorMethod =
+                ((MethodInfo) MethodBase.GetMethodFromHandle(CreateImporterMethods[lambdaType.GetGenericArguments().Length - 1]))
                     .MakeGenericMethod(lambdaType.GetGenericArguments());
 
             var selector = selectorLambda.Compile();
@@ -109,7 +115,7 @@ namespace DeJson
                     .Concat(new object[] { selector })
                     .ToArray();
 
-            var importer = (Delegate) importCreatorMethod.Invoke(null, args.ToArray());
+            var importer = (Delegate) createImporterCreatorMethod.Invoke(null, args.ToArray());
             return importer;
         }
 
