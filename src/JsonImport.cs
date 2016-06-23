@@ -24,23 +24,6 @@ namespace DeJson
     using Jayrock.Json;
     using Mannex.Collections.Generic;
 
-    static class Importer
-    {
-        internal static Importer<T> Create<T>(Func<JsonReader, T> func) =>
-            new Importer<T>(func);
-    }
-
-    public sealed class Importer<T>
-    {
-        readonly Func<JsonReader, T> _impl;
-        public Importer(Func<JsonReader, T> impl) { _impl = impl; }
-        internal T Import(JsonReader reader) => _impl(reader);
-        public T Import(string json) => _impl(ReadJson(json));
-        static JsonReader ReadJson(string json) => JsonText.CreateReader(json);
-        public Importer<T[]> ToArrayImporter() =>
-            Importer.Create(JsonImport.CreateArrayImporter(Import));
-    }
-
     public static partial class JsonImport
     {
         internal static Func<JsonReader, T[]> CreateArrayImporter<T>(Func<JsonReader, T> importer) =>
