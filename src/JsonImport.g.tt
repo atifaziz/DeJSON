@@ -26,7 +26,7 @@
 <#
     var arities =
         Enumerable
-            .Range(1, 16)
+            .Range(1, 24)
             .Select(len =>
                 Enumerable
                     .Range(1, len)
@@ -43,12 +43,23 @@ namespace DeJson
     using Mannex.Collections.Generic;
     using MoreLinq;
 
+    // There are only 16 Func delegates available in the BCL but more are
+    // needed to work with structures that have more than 16 members.
+
+<#  foreach (var ns in
+        from ns in arities
+        select
+            from n in ns
+            select ns.Length > 1 ? n : string.Empty) { #>
+    delegate TResult Selector<<#= string.Join(", ", from n in ns select "T" + n) #>, TResult>(<#= string.Join(", ", from n in ns select "T" + n + " arg" + n) #>);
+<#  }#>
+
     partial class JsonImport
     {
-        static readonly Type[] GenericFuncDefinitions =
+        static readonly Type[] SelectorTypes =
         {
 <#  foreach (var ns in arities) { #>
-            /* [<#= ns.Length.ToString(CultureInfo.InvariantCulture).PadLeft(2) #>] */ typeof(Func<<#= string.Concat(Enumerable.Repeat(",", ns.Length)) #>>),
+            /* [<#= ns.Length.ToString(CultureInfo.InvariantCulture).PadLeft(2) #>] */ typeof(Selector<<#= string.Concat(Enumerable.Repeat(",", ns.Length)) #>>),
 <#  }#>
         };
 <#  foreach (var ns in arities) { #>
@@ -58,7 +69,7 @@ namespace DeJson
 <#      foreach (var n in ns) { #>
             Func<JsonReader, T<#= n #>> r<#= n #>,
 <#      } #>
-            Func<<#= string.Join(", ", from n in ns select "T" + n) #>, TResult> selector)
+            Selector<<#= string.Join(", ", from n in ns select "T" + n) #>, TResult> selector)
         {
             var map = names.Index(1).ToDictionary(e => e.Value, e => e.Key, StringComparer.OrdinalIgnoreCase);
             return reader =>

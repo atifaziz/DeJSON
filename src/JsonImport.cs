@@ -85,7 +85,7 @@ namespace DeJson
             var paramz = properties.Select(p => Expression.Parameter(p.PropertyType))
                                    .ToArray();
 
-            var lambdaType = GenericFuncDefinitions[properties.Length - 1].MakeGenericType(propertyTypes.Concat(new[] { type }).ToArray());
+            var lambdaType = SelectorTypes[properties.Length - 1].MakeGenericType(propertyTypes.Concat(new[] { type }).ToArray());
             var selectorLambda =
                 Expression.Lambda(lambdaType,
                                   parameters: paramz,
