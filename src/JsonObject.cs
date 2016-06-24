@@ -25,6 +25,8 @@ namespace DeJson
 
     public sealed class JsonObject : IList<KeyValuePair<string, JsonValue>>
     {
+        public static readonly JsonObject Empty = new JsonObject(new KeyValuePair<string, JsonBuffer>[0]);
+
         readonly KeyValuePair<string, JsonBuffer>[] _members;
 
         internal JsonObject(KeyValuePair<string, JsonBuffer>[] members)
@@ -56,8 +58,10 @@ namespace DeJson
                     Array.Resize(ref members, members?.Length * 2 ?? 4);
                 members[count] = name.AsKeyTo(value);
             }
-            Array.Resize(ref members, count);
             reader.ReadToken(JsonTokenClass.EndObject);
+            if (count == 0)
+                return Empty;
+            Array.Resize(ref members, count);
             return new JsonObject(members);
         }
 

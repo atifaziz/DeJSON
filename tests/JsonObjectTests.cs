@@ -11,6 +11,12 @@ namespace DeJson.Tests
         [Test]
         public void Empty()
         {
+            Assert.That(JsonObject.Empty.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void ImportEmpty()
+        {
             var obj = JsonObject.Import("{}");
             Assert.That(obj.Count, Is.EqualTo(0));
             Assert.That(obj.Names.Any(), Is.False);
