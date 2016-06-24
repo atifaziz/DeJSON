@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>DeJson</id>
+    <version>1.0.0</version>
+    <title>DeJSON: Destructuring JSON</title>
+    <authors>Atif Aziz</authors>
+    <owners>Atif Aziz</owners>
+    <licenseUrl>http://www.apache.org/licenses/LICENSE-2.0</licenseUrl>
+    <projectUrl>https://github.com/atifaziz/DeJson</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Library for importing JSON by &#x201c;literally&#x201d; describing how destructure JSON into .NET types.</description>
+    <copyright>Copyright &#xa9; 2016 Atif Aziz. All rights reserved.</copyright>
+    <tags>json</tags>
+  </metadata>
+</package>

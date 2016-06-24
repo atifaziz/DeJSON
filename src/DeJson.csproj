@@ -47,6 +47,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="AL.licenseheader" />
+    <None Include="DeJson.nuspec" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
@@ -63,10 +64,10 @@
     <Compile Include="JsonObject.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="JsonImport.g.tt">
+    <None Include="JsonImport.g.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>JsonImport.g.cs</LastGenOutput>
-    </Content>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
