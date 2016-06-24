@@ -8,54 +8,54 @@ namespace DeJson.Tests
         [TestCase(true, "true")]
         [TestCase(false, "false")]
         public void ImportBoolean(bool expected, string json) =>
-            Assert.That(JsonImport.BooleanImporter.Import(json), Is.EqualTo(expected));
+            Assert.That(JsonImporters.Boolean.Import(json), Is.EqualTo(expected));
 
         [TestCase(true , "true")]
         [TestCase(false, "false")]
         [TestCase(null , "null")]
-        public void TryImportBoolean(bool? expected, string json) =>
-            Assert.That(JsonImport.OptBooleanImporter.Import(json), Is.EqualTo(expected));
+        public void ImportNullableBoolean(bool? expected, string json) =>
+            Assert.That(JsonImporters.NullableBoolean.Import(json), Is.EqualTo(expected));
 
         [TestCase(42, "42")]
         public void ImportInt32(int expected, string json) =>
-            Assert.That(JsonImport.Int32Importer.Import(json), Is.EqualTo(expected));
+            Assert.That(JsonImporters.Int32.Import(json), Is.EqualTo(expected));
 
         [TestCase(42, "42")]
         [TestCase(null, "null")]
         public void TryImportInt32(int? expected, string json) =>
-            Assert.That(JsonImport.OptInt32Importer.Import(json), Is.EqualTo(expected));
+            Assert.That(JsonImporters.NullableInt32.Import(json), Is.EqualTo(expected));
 
         [TestCase(42L, "42")]
         public void ImportInt64(long expected, string json) =>
-            Assert.That(JsonImport.Int64Importer.Import(json), Is.EqualTo(expected));
+            Assert.That(JsonImporters.Int64.Import(json), Is.EqualTo(expected));
 
         [TestCase(42L, "42")]
         [TestCase(null, "null")]
         public void TryImportInt64(long? expected, string json) =>
-            Assert.That(JsonImport.OptInt64Importer.Import(json), Is.EqualTo(expected));
+            Assert.That(JsonImporters.NullableInt64.Import(json), Is.EqualTo(expected));
 
         [TestCase(3.14f, "3.14")]
         public void ImportSingle(float expected, string json) =>
-            Assert.That(JsonImport.SingleImporter.Import(json), Is.EqualTo(expected));
+            Assert.That(JsonImporters.Single.Import(json), Is.EqualTo(expected));
 
         [TestCase(3.14f, "3.14")]
         [TestCase(null, "null")]
-        public void TryImportSingle(float? expected, string json) =>
-            Assert.That(JsonImport.OptSingleImporter.Import(json), Is.EqualTo(expected));
+        public void ImportNullableSingle(float? expected, string json) =>
+            Assert.That(JsonImporters.NullableSingle.Import(json), Is.EqualTo(expected));
 
         [TestCase(3.14, "3.14")]
         public void ImportDouble(double expected, string json) =>
-            Assert.That(JsonImport.DoubleImporter.Import(json), Is.EqualTo(expected));
+            Assert.That(JsonImporters.Double.Import(json), Is.EqualTo(expected));
 
         [TestCase(3.14, "3.14")]
         [TestCase(null, "null")]
-        public void TryImportDouble(double? expected, string json) =>
-            Assert.That(JsonImport.OptDoubleImporter.Import(json), Is.EqualTo(expected));
+        public void ImportNullableDouble(double? expected, string json) =>
+            Assert.That(JsonImporters.NullableDouble.Import(json), Is.EqualTo(expected));
 
         [TestCase("foobar", @"foobar")]
         [TestCase("foo\nbar", @"'foo\nbar'")]
         public void ImportString(string expected, string json) =>
-            Assert.That(JsonImport.StringImporter.Import(json), Is.EqualTo(expected));
+            Assert.That(JsonImporters.String.Import(json), Is.EqualTo(expected));
 
         [Test]
         public void ImportObject()
@@ -149,7 +149,7 @@ namespace DeJson.Tests
         [Test]
         public void ImportArray()
         {
-            var importer = JsonImport.Int32Importer.ToArrayImporter();
+            var importer = JsonImporters.Int32.ToArrayImporter();
             var result = importer.Import("[123, 456, 789]");
             Assert.That(result, Is.EquivalentTo(new[] { 123, 456, 789 }));
         }
@@ -202,15 +202,15 @@ namespace DeJson.Tests
 
             Assert.That(pt.MoveNext(), Is.True);
             Assert.That(pt.Current.Key, Is.EqualTo("x"));
-            Assert.That(pt.Current.Value.Import(JsonImport.Int32Importer), Is.EqualTo(12));
+            Assert.That(pt.Current.Value.Import(JsonImporters.Int32), Is.EqualTo(12));
 
             Assert.That(pt.MoveNext(), Is.True);
             Assert.That(pt.Current.Key, Is.EqualTo("y"));
-            Assert.That(pt.Current.Value.Import(JsonImport.Int32Importer), Is.EqualTo(34));
+            Assert.That(pt.Current.Value.Import(JsonImporters.Int32), Is.EqualTo(34));
 
             Assert.That(pt.MoveNext(), Is.True);
             Assert.That(pt.Current.Key, Is.EqualTo("z"));
-            Assert.That(pt.Current.Value.Import(JsonImport.DoubleImporter), Is.EqualTo(56.78));
+            Assert.That(pt.Current.Value.Import(JsonImporters.Double), Is.EqualTo(56.78));
         }
     }
 }

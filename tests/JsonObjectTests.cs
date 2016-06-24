@@ -28,9 +28,9 @@ namespace DeJson.Tests
         {
             var obj = new JsonObject(new[]
             {
-                new KeyValuePair<string, JsonValue>("foo", JsonImport.JsonImporter.Import("123")),
-                new KeyValuePair<string, JsonValue>("bar", JsonImport.JsonImporter.Import("456")),
-                new KeyValuePair<string, JsonValue>("baz", JsonImport.JsonImporter.Import("789")),
+                new KeyValuePair<string, JsonValue>("foo", JsonImporters.JsonValue.Import("123")),
+                new KeyValuePair<string, JsonValue>("bar", JsonImporters.JsonValue.Import("456")),
+                new KeyValuePair<string, JsonValue>("baz", JsonImporters.JsonValue.Import("789")),
             });
 
             using (var e = obj.GetEnumerator())
@@ -65,8 +65,8 @@ namespace DeJson.Tests
             // ReSharper disable once ObjectCreationAsStatement
             var e = Assert.Throws<ArgumentException>(() => new JsonObject(new[]
             {
-                new KeyValuePair<string, JsonValue>("foo", JsonImport.JsonImporter.Import("123")),
-                new KeyValuePair<string, JsonValue>(null, JsonImport.JsonImporter.Import("789")),
+                new KeyValuePair<string, JsonValue>("foo", JsonImporters.JsonValue.Import("123")),
+                new KeyValuePair<string, JsonValue>(null, JsonImporters.JsonValue.Import("789")),
             }));
             Assert.That(e.ParamName, Is.EqualTo("members"));
             Assert.That(e.Message.IndexOf("(#2)", StringComparison.Ordinal), Is.GreaterThan(0));
@@ -78,7 +78,7 @@ namespace DeJson.Tests
             // ReSharper disable once ObjectCreationAsStatement
             var e = Assert.Throws<ArgumentException>(() => new JsonObject(new[]
             {
-                new KeyValuePair<string, JsonValue>("foo", JsonImport.JsonImporter.Import("123")),
+                new KeyValuePair<string, JsonValue>("foo", JsonImporters.JsonValue.Import("123")),
                 new KeyValuePair<string, JsonValue>("bar", JsonValue.Empty),
             }));
             Assert.That(e.ParamName, Is.EqualTo("members"));
