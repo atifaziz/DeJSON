@@ -25,32 +25,16 @@ namespace DeJson
 
     public static partial class JsonImport
     {
-        internal static Func<JsonReader, T[]> CreateArrayImporter<T>(Func<JsonReader, T> importer) =>
-            reader =>
-            {
-                if (!reader.MoveToContent())
-                    throw new Exception();
-                reader.ReadToken(JsonTokenClass.Array);
-                var list = new List<T>();
-                while (reader.TokenClass != JsonTokenClass.EndArray)
-                    list.Add(importer(reader));
-                reader.Read();
-                return list.ToArray();
-            };
-
         public static Importer<T> CreateImporter<T>(Expression<Func<T>> prototype) =>
-            Importer.Create(CreateImporterCore(prototype));
-
-        static Func<JsonReader, T> CreateImporterCore<T>(Expression<Func<T>> prototype) =>
-            CreateImporter(prototype, JsonImporters.Map);
+            Importer.Create(CreateImporter(prototype, JsonImporters.Map));
 
         static Func<JsonReader, T> CreateImporter<T>(Expression<Func<T>> prototype, Func<Type, Delegate> mapper)
         {
             if (prototype == null) throw new ArgumentNullException(nameof(prototype));
             var newExpression = prototype.Body as NewExpression;
             if (newExpression?.Members == null)
-                throw new ArgumentException(null, nameof(prototype));
-            return (Func<JsonReader, T>) CreateImporterLambda(newExpression, typeof(T), mapper);
+                throw new ArgumentException(/* TODO */ null, nameof(prototype));
+            return (Func<JsonReader, T>) CreateImporter(newExpression, typeof(T), mapper);
         }
 
         static readonly RuntimeMethodHandle[] CreateImporterMethods =
@@ -64,21 +48,21 @@ namespace DeJson
                 .Select(m => m.MethodHandle)
                 .ToArray();
 
-        static Delegate CreateImporterLambda(NewExpression @new, Type type, Func<Type, Delegate> mapper)
+        static Delegate CreateImporter(NewExpression @new, Type type, Func<Type, Delegate> mapper)
         {
             var properties = (@new.Members ?? Enumerable.Empty<MemberInfo>()).Cast<PropertyInfo>().ToArray();
             var readers =
-                from p in properties.Zip(@new.Arguments, (p, a) => new
+                from p in properties.Zip(@new.Arguments, (prop, arg) => new
                 {
-                    Property = p,
-                    New      = a as NewExpression,
-                    Array    = a as NewArrayExpression,
-                    Const    = a as ConstantExpression,
+                    Property = prop,
+                    New      = arg as NewExpression,
+                    Array    = arg as NewArrayExpression,
+                    Const    = arg as ConstantExpression,
                 })
                 select p.New != null
-                     ? CreateImporterLambda(p.New, p.New.Type, mapper)
+                     ? CreateImporter(p.New, p.New.Type, mapper)
                      : p.Array != null
-                     ? CreateArrayImporter(p.Array.Type.GetElementType(), CreateImporterLambda(p.Array.Expressions.Cast<NewExpression>().Single(), p.Array.Type.GetElementType(), mapper))
+                     ? CreateArrayImporter(p.Array.Type.GetElementType(), CreateImporter(p.Array.Expressions.Cast<NewExpression>().Single(), p.Array.Type.GetElementType(), mapper))
                      : p.Const == null
                      ? null // TODO
                      : p.Const.Type.IsArray
@@ -92,7 +76,10 @@ namespace DeJson
             var paramz = properties.Select(p => Expression.Parameter(p.PropertyType))
                                    .ToArray();
 
-            var lambdaType = SelectorTypes[properties.Length - 1].MakeGenericType(propertyTypes.Concat(new[] { type }).ToArray());
+            var lambdaType =
+                SelectorTypes[properties.Length - 1]
+                    .MakeGenericType(propertyTypes.Concat(new[] { type }).ToArray());
+
             var selectorLambda =
                 Expression.Lambda(lambdaType,
                                   parameters: paramz,
@@ -100,29 +87,17 @@ namespace DeJson
                                                        // ReSharper disable once CoVariantArrayConversion
                                                        paramz));
 
-            var createImporterCreatorMethod =
+            var createImporterMethod =
                 ((MethodInfo) MethodBase.GetMethodFromHandle(CreateImporterMethods[lambdaType.GetGenericArguments().Length - 1]))
                     .MakeGenericMethod(lambdaType.GetGenericArguments());
 
-            var selector = selectorLambda.Compile();
-
             var args =
-                new object[] {names}
+                new object[] { names }
                     .Concat(readers)
-                    .Concat(new object[] {selector});
+                    .Concat(new object[] { selectorLambda.Compile() });
 
-            var importer = (Delegate) createImporterCreatorMethod.Invoke(null, args.ToArray());
-            return importer;
+            return (Delegate) createImporterMethod.Invoke(null, args.ToArray());
         }
-
-        static readonly MethodInfo CreateArrayImporterCoreGenericMethodDefinition =
-            new Func<Func<JsonReader, int>, Func<JsonReader, int[]>>(CreateArrayImporter).Method.GetGenericMethodDefinition();
-
-        static Delegate CreateArrayImporter(Type type, Delegate del) =>
-            (Delegate)
-                CreateArrayImporterCoreGenericMethodDefinition
-                    .MakeGenericMethod(type)
-                    .Invoke(null, new object[] { del });
 
         static IEnumerator<string> Members(JsonReader reader)
         {
@@ -134,5 +109,27 @@ namespace DeJson
             reader.ReadToken(JsonTokenClass.EndObject);
             // TODO consider asserting depth on entry/exit
         }
+
+        static readonly MethodInfo CreateArrayImporterGenericMethodDefinition =
+            new Func<Func<JsonReader, int>, Func<JsonReader, int[]>>(CreateArrayImporter).Method.GetGenericMethodDefinition();
+
+        internal static Func<JsonReader, T[]> CreateArrayImporter<T>(Func<JsonReader, T> importer) =>
+            reader =>
+            {
+                if (!reader.MoveToContent())
+                    throw new Exception();
+                reader.ReadToken(JsonTokenClass.Array);
+                var list = new List<T>();
+                while (reader.TokenClass != JsonTokenClass.EndArray)
+                    list.Add(importer(reader));
+                reader.Read();
+                return list.ToArray();
+            };
+
+        static Delegate CreateArrayImporter(Type type, Delegate del) =>
+            (Delegate)
+                CreateArrayImporterGenericMethodDefinition
+                    .MakeGenericMethod(type)
+                    .Invoke(null, new object[] { del });
     }
 }
