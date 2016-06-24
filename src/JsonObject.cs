@@ -27,7 +27,7 @@ namespace DeJson
     {
         readonly KeyValuePair<string, JsonBuffer>[] _members;
 
-        public JsonObject(KeyValuePair<string, JsonBuffer>[] members)
+        internal JsonObject(KeyValuePair<string, JsonBuffer>[] members)
         {
             if (members == null) throw new ArgumentNullException(nameof(members));
             _members = members;
