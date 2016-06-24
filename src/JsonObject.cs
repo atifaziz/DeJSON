@@ -25,13 +25,30 @@ namespace DeJson
 
     public sealed class JsonObject : IList<KeyValuePair<string, JsonValue>>
     {
-        public static readonly JsonObject Empty = new JsonObject(new KeyValuePair<string, JsonBuffer>[0]);
+        public static readonly JsonObject Empty = new JsonObject(new KeyValuePair<string, JsonValue>[0]);
 
-        readonly KeyValuePair<string, JsonBuffer>[] _members;
+        readonly KeyValuePair<string, JsonValue>[] _members;
 
-        internal JsonObject(KeyValuePair<string, JsonBuffer>[] members)
+        public JsonObject(IEnumerable<KeyValuePair<string, JsonValue>> members) :
+            this(Validating(members).ToArray()) { }
+
+        static IEnumerable<KeyValuePair<string, JsonValue>> Validating(IEnumerable<KeyValuePair<string, JsonValue>> members)
         {
             if (members == null) throw new ArgumentNullException(nameof(members));
+            var i = 1;
+            foreach (var member in members)
+            {
+                if (member.Key == null)
+                    throw new ArgumentException($"JSON object member (#{i}) name must be defined.", nameof(members));
+                if (member.Value.IsEmpty)
+                    throw new ArgumentException($"JSON object member (#{i}) value must be defined.", nameof(members));
+                i++;
+                yield return member;
+            }
+        }
+
+        internal JsonObject(KeyValuePair<string, JsonValue>[] members)
+        {
             _members = members;
         }
 
@@ -47,7 +64,7 @@ namespace DeJson
                 reader.ReadNull();
                 return null;
             }
-            KeyValuePair<string, JsonBuffer>[] members = null;
+            KeyValuePair<string, JsonValue>[] members = null;
             reader.ReadToken(JsonTokenClass.Object);
             var count = 0;
             for (; reader.TokenClass != JsonTokenClass.EndObject; count++)
@@ -56,7 +73,7 @@ namespace DeJson
                 var value = JsonBuffer.From(reader);
                 if (members == null || count >= members.Length)
                     Array.Resize(ref members, members?.Length * 2 ?? 4);
-                members[count] = name.AsKeyTo(value);
+                members[count] = name.AsKeyTo(new JsonValue(value));
             }
             reader.ReadToken(JsonTokenClass.EndObject);
             if (count == 0)
@@ -73,8 +90,7 @@ namespace DeJson
             {
                 if (index < 0 || index >= Count)
                     throw new ArgumentOutOfRangeException(nameof(index), index, null);
-                var member = _members[index];
-                return member.Key.AsKeyTo(new JsonValue(member.Value));
+                return _members[index];
             }
         }
 
@@ -95,7 +111,7 @@ namespace DeJson
         public JsonValue? Find(string name)
         {
             var i = IndexOf(name);
-            return i >= 0 ? new JsonValue(_members[i].Value) : null as JsonValue?;
+            return i >= 0 ? _members[i].Value : null as JsonValue?;
         }
 
         public bool Contains(string name) => IndexOf(name) >= 0;
@@ -115,7 +131,7 @@ namespace DeJson
         {
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var member in _members)
-                yield return member.Key.AsKeyTo(new JsonValue(member.Value));
+                yield return member;
         }
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();

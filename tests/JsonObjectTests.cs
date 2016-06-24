@@ -11,18 +11,78 @@ namespace DeJson.Tests
         [Test]
         public void Empty()
         {
-            Assert.That(JsonObject.Empty.Count, Is.EqualTo(0));
+            AssertEmpty(JsonObject.Empty);
         }
 
-        [Test]
-        public void ImportEmpty()
+        static void AssertEmpty(JsonObject obj)
         {
-            var obj = JsonObject.Import("{}");
             Assert.That(obj.Count, Is.EqualTo(0));
             Assert.That(obj.Names.Any(), Is.False);
             Assert.That(obj.Values.Any(), Is.False);
             Assert.That(obj.IndexOf("foobar"), Is.EqualTo(-1));
             Assert.That(obj.Find("foobar"), Is.Null);
+        }
+
+        [Test]
+        public void Init()
+        {
+            var obj = new JsonObject(new[]
+            {
+                new KeyValuePair<string, JsonValue>("foo", JsonImport.JsonImporter.Import("123")),
+                new KeyValuePair<string, JsonValue>("bar", JsonImport.JsonImporter.Import("456")),
+                new KeyValuePair<string, JsonValue>("baz", JsonImport.JsonImporter.Import("789")),
+            });
+
+            using (var e = obj.GetEnumerator())
+            {
+                Assert.That(e.MoveNext(), Is.True);
+                Assert.That(e.Current.Key, Is.EqualTo("foo"));
+                Assert.That(e.Current.Value.ToString(), Is.EqualTo("123"));
+
+                Assert.That(e.MoveNext(), Is.True);
+                Assert.That(e.Current.Key, Is.EqualTo("bar"));
+                Assert.That(e.Current.Value.ToString(), Is.EqualTo("456"));
+
+                Assert.That(e.MoveNext(), Is.True);
+                Assert.That(e.Current.Key, Is.EqualTo("baz"));
+                Assert.That(e.Current.Value.ToString(), Is.EqualTo("789"));
+
+                Assert.That(e.MoveNext(), Is.False);
+            }
+        }
+
+        [Test]
+        public void CannotInitWithNullMembers()
+        {
+            // ReSharper disable once ObjectCreationAsStatement
+            var e = Assert.Throws<ArgumentNullException>(() => new JsonObject(null));
+            Assert.That(e.ParamName, Is.EqualTo("members"));
+        }
+
+        [Test]
+        public void CannotInitWithAnyMemberNameBeingNull()
+        {
+            // ReSharper disable once ObjectCreationAsStatement
+            var e = Assert.Throws<ArgumentException>(() => new JsonObject(new[]
+            {
+                new KeyValuePair<string, JsonValue>("foo", JsonImport.JsonImporter.Import("123")),
+                new KeyValuePair<string, JsonValue>(null, JsonImport.JsonImporter.Import("789")),
+            }));
+            Assert.That(e.ParamName, Is.EqualTo("members"));
+            Assert.That(e.Message.IndexOf("(#2)", StringComparison.Ordinal), Is.GreaterThan(0));
+        }
+
+        [Test]
+        public void CannotInitWithAnyMemberValueBeingEmpty()
+        {
+            // ReSharper disable once ObjectCreationAsStatement
+            var e = Assert.Throws<ArgumentException>(() => new JsonObject(new[]
+            {
+                new KeyValuePair<string, JsonValue>("foo", JsonImport.JsonImporter.Import("123")),
+                new KeyValuePair<string, JsonValue>("bar", JsonValue.Empty),
+            }));
+            Assert.That(e.ParamName, Is.EqualTo("members"));
+            Assert.That(e.Message.IndexOf("(#2)", StringComparison.Ordinal), Is.GreaterThan(0));
         }
 
         [Test]
@@ -35,6 +95,12 @@ namespace DeJson.Tests
             Assert.That(e.ParamName, Is.EqualTo("index"));
             Assert.That(e.ActualValue, Is.EqualTo(0));
         }
+
+        [Test]
+        public void InitEmpty() => AssertEmpty(JsonObject.Import("{}"));
+
+        [Test]
+        public void ImportEmpty() => AssertEmpty(JsonObject.Import("{}"));
 
         [Test]
         public void IndexerWithNegativeIndexThrows()
