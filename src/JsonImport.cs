@@ -107,10 +107,9 @@ namespace DeJson
             var selector = selectorLambda.Compile();
 
             var args =
-                new object[] { names }
+                new object[] {names}
                     .Concat(readers)
-                    .Concat(new object[] { selector })
-                    .ToArray();
+                    .Concat(new object[] {selector});
 
             var importer = (Delegate) createImporterCreatorMethod.Invoke(null, args.ToArray());
             return importer;
