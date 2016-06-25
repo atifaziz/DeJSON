@@ -1,5 +1,6 @@
 namespace DeJson.Tests
 {
+    using System;
     using NUnit.Framework;
 
     [TestFixture]
@@ -14,16 +15,19 @@ namespace DeJson.Tests
                 y     = default(int?),
                 z     = default(double),
                 label = default(string),
+                date  = default(DateTime),
             });
 
-            var obj = importer.Import("{ x: 12, y: 34, z: 56.78, label: foobar }");
+            var obj = importer.Import(@"{ x: 12, y: 34, z: 56.78,
+                                          label: foobar, date: '2000-12-04' }");
 
             Assert.That(obj, Is.EqualTo(new
             {
                 x = 12,
                 y = 34 as int?,
                 z = 56.78,
-                label = "foobar"
+                label = "foobar",
+                date  = new DateTime(2000, 12, 04),
             }));
         }
 

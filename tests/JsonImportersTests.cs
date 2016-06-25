@@ -1,5 +1,6 @@
 namespace DeJson.Tests
 {
+    using System;
     using NUnit.Framework;
 
     [TestFixture]
@@ -56,5 +57,47 @@ namespace DeJson.Tests
         [TestCase("foo\nbar", @"'foo\nbar'")]
         public void ImportString(string expected, string json) =>
             Assert.That(JsonImporters.String.Import(json), Is.EqualTo(expected));
+
+        [TestCase(2000, 12, 04, 00, 00, 00, 000.0000, DateTimeKind.Unspecified, "2000-12-04")]
+        [TestCase(2000, 12, 04, 06, 22, 00, 000.0000, DateTimeKind.Unspecified, "2000-12-04T06:22")]
+        [TestCase(2000, 12, 04, 05, 22, 00, 000.0000, DateTimeKind.Utc        , "2000-12-04T05:22Z")]
+        [TestCase(2000, 12, 04, 05, 22, 00, 000.0000, DateTimeKind.Utc        , "2000-12-04T06:22+01:00")]
+        [TestCase(2000, 12, 04, 06, 22, 42, 000.0000, DateTimeKind.Unspecified, "2000-12-04T06:22:42")]
+        [TestCase(2000, 12, 04, 05, 22, 42, 000.0000, DateTimeKind.Utc        , "2000-12-04T05:22:42Z")]
+        [TestCase(2000, 12, 04, 05, 22, 42, 000.0000, DateTimeKind.Utc        , "2000-12-04T06:22:42+01:00")]
+        [TestCase(2000, 12, 04, 06, 22, 42, 100.0000, DateTimeKind.Unspecified, "2000-12-04T06:22:42.1")]
+        [TestCase(2000, 12, 04, 05, 22, 42, 100.0000, DateTimeKind.Utc        , "2000-12-04T05:22:42.1Z")]
+        [TestCase(2000, 12, 04, 05, 22, 42, 100.0000, DateTimeKind.Utc        , "2000-12-04T06:22:42.1+01:00")]
+        [TestCase(2000, 12, 04, 06, 22, 42, 120.0000, DateTimeKind.Unspecified, "2000-12-04T06:22:42.12")]
+        [TestCase(2000, 12, 04, 05, 22, 42, 120.0000, DateTimeKind.Utc        , "2000-12-04T05:22:42.12Z")]
+        [TestCase(2000, 12, 04, 05, 22, 42, 120.0000, DateTimeKind.Utc        , "2000-12-04T06:22:42.12+01:00")]
+        [TestCase(2000, 12, 04, 06, 22, 42, 123.0000, DateTimeKind.Unspecified, "2000-12-04T06:22:42.123")]
+        [TestCase(2000, 12, 04, 05, 22, 42, 123.0000, DateTimeKind.Utc        , "2000-12-04T05:22:42.123Z")]
+        [TestCase(2000, 12, 04, 05, 22, 42, 123.0000, DateTimeKind.Utc        , "2000-12-04T06:22:42.123+01:00")]
+        [TestCase(2000, 12, 04, 06, 22, 42, 123.4000, DateTimeKind.Unspecified, "2000-12-04T06:22:42.1234")]
+        [TestCase(2000, 12, 04, 05, 22, 42, 123.4000, DateTimeKind.Utc        , "2000-12-04T05:22:42.1234Z")]
+        [TestCase(2000, 12, 04, 05, 22, 42, 123.4000, DateTimeKind.Utc        , "2000-12-04T06:22:42.1234+01:00")]
+        [TestCase(2000, 12, 04, 06, 22, 42, 123.4500, DateTimeKind.Unspecified, "2000-12-04T06:22:42.12345")]
+        [TestCase(2000, 12, 04, 05, 22, 42, 123.4500, DateTimeKind.Utc        , "2000-12-04T05:22:42.12345Z")]
+        [TestCase(2000, 12, 04, 05, 22, 42, 123.4500, DateTimeKind.Utc        , "2000-12-04T06:22:42.12345+01:00")]
+        [TestCase(2000, 12, 04, 06, 22, 42, 123.4560, DateTimeKind.Unspecified, "2000-12-04T06:22:42.123456")]
+        [TestCase(2000, 12, 04, 05, 22, 42, 123.4560, DateTimeKind.Utc        , "2000-12-04T05:22:42.123456Z")]
+        [TestCase(2000, 12, 04, 05, 22, 42, 123.4560, DateTimeKind.Utc        , "2000-12-04T06:22:42.123456+01:00")]
+        [TestCase(2000, 12, 04, 06, 22, 42, 123.4567, DateTimeKind.Unspecified, "2000-12-04T06:22:42.1234567")]
+        [TestCase(2000, 12, 04, 05, 22, 42, 123.4567, DateTimeKind.Utc        , "2000-12-04T05:22:42.1234567Z")]
+        [TestCase(2000, 12, 04, 05, 22, 42, 123.4567, DateTimeKind.Utc        , "2000-12-04T06:22:42.1234567+01:00")]
+        public void ImportDateTime(int year, int month, int day, int hour, int minute, int second, double ms, DateTimeKind kind, string json)
+        {
+            var actual = JsonImporters.DateTime.Import("'" + json + "'");
+            var expected = new DateTime(year, month, day, hour, minute, second, kind).AddTicks((int) (ms * 1e4));
+
+            Assert.That(actual.Kind, Is.EqualTo(kind == DateTimeKind.Unspecified
+                                                ? DateTimeKind.Unspecified
+                                                : DateTimeKind.Local));
+
+            Assert.That(actual, Is.EqualTo(expected.Kind == DateTimeKind.Utc
+                                           ? expected.ToLocalTime()
+                                           : expected));
+        }
     }
 }
