@@ -23,34 +23,48 @@ namespace DeJson
     using System.Reflection;
     using Jayrock.Json;
 
-    public static partial class JsonImport
+    public sealed class JsonImporter<T>
+    {
+        readonly Func<JsonReader, T> _impl;
+        public JsonImporter(Func<JsonReader, T> impl) { _impl = impl; }
+        internal T Import(JsonReader reader) => _impl(reader);
+        public T Import(string json) => _impl(ReadJson(json));
+        public T Import(JsonValue json) => _impl(json.CreateReader());
+        static JsonReader ReadJson(string json) => JsonText.CreateReader(json);
+        public JsonImporter<T[]> ToArrayImporter() =>
+            JsonImporter.Create(JsonImporter.CreateArrayImporter(Import));
+    }
+
+    public static partial class JsonImporter
     {
         static readonly RuntimeMethodHandle[] CreateImporterMethods =
-            typeof(JsonImport)
+            typeof(JsonImporter)
                 .FindMembers(MemberTypes.Method, BindingFlags.Static | BindingFlags.NonPublic,
                              filterCriteria: null,
-                             filter: (m, _) => m.Name == nameof(JsonImport.CreateImporter))
+                             filter: (m, _) => m.Name == nameof(JsonImporter.CreateImporter))
                 .Cast<MethodInfo>()
                 .Where(m => m.IsGenericMethodDefinition)
                 .OrderBy(m => m.GetGenericArguments().Length)
                 .Select(m => m.MethodHandle)
                 .ToArray();
 
-        public static Importer<T> CreateImporter<T>(Expression<Func<T>> prototype) =>
-            Importer.Create((Func<JsonReader, T>) CreateImporter(prototype.Body, JsonImporters.Map));
+        internal static JsonImporter<T> Create<T>(Func<JsonReader, T> func) =>
+            new JsonImporter<T>(func);
 
-        static Delegate CreateImporter(Expression e, Func<Type, Delegate> mapper, string paramName = "prototype")
+        public static JsonImporter<T> Create<T>(Expression<Func<T>> prototype) =>
+            Create((Func<JsonReader, T>)Create(prototype.Body, JsonImporters.Map));
+
+        static Delegate Create(Expression prototype, Func<Type, Delegate> mapper)
         {
-            var newObject = e as NewExpression;
+            var newObject = prototype as NewExpression;
             if (newObject != null)
             {
                 if (newObject.Members == null)
-                    // ReSharper disable once NotResolvedInText
-                    throw new ArgumentException("Prototype object must have at least one member.", paramName);
+                    throw new ArgumentException("Prototype object must have at least one member.", nameof(prototype));
                 return CreateObjectImporter(newObject, newObject.Type, mapper);
             }
 
-            var newArray = e as NewArrayExpression;
+            var newArray = prototype as NewArrayExpression;
             if (newArray != null)
             {
                 var elementType = newArray.Type.GetElementType();
@@ -58,9 +72,9 @@ namespace DeJson
                 return CreateArrayImporter(elementType, CreateObjectImporter(newElement, elementType, mapper));
             }
 
-            return e.Type.IsArray
-                 ? CreateArrayImporter(e.Type.GetElementType(), mapper(e.Type.GetElementType()))
-                 : mapper(e.Type);
+            return prototype.Type.IsArray
+                 ? CreateArrayImporter(prototype.Type.GetElementType(), mapper(prototype.Type.GetElementType()))
+                 : mapper(prototype.Type);
         }
 
         static Delegate CreateObjectImporter(NewExpression newExpression, Type type, Func<Type, Delegate> mapper)
@@ -88,7 +102,7 @@ namespace DeJson
 
             var args =
                 new object[] { names }
-                    .Concat(from arg in newExpression.Arguments select CreateImporter(arg, mapper))
+                    .Concat(from arg in newExpression.Arguments select Create(arg, mapper))
                     .Concat(new object[] { selectorLambda.Compile() });
 
             return (Delegate) createImporterMethod.Invoke(null, args.ToArray());

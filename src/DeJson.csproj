@@ -52,10 +52,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AssemblyInfo.cs" />
-    <Compile Include="Importer.cs" />
     <Compile Include="JsonImporters.cs" />
     <Compile Include="JsonValue.cs" />
-    <Compile Include="JsonImport.cs" />
+    <Compile Include="JsonImporter.cs" />
     <Compile Include="JsonImport.g.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>

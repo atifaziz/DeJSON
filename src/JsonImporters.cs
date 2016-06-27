@@ -53,24 +53,24 @@ namespace DeJson
             Map = type => importerByType.GetValue(type, it => new Exception($"Don't know how to import {it.FullName} from JSON."));
         }
 
-        public static Importer<bool>            Boolean          = Importer.Create(ImportBoolean);
-        public static Importer<int>             Int32            = Importer.Create(ImportInt32);
-        public static Importer<long>            Int64            = Importer.Create(ImportInt64);
-        public static Importer<float>           Single           = Importer.Create(ImportSingle);
-        public static Importer<double>          Double           = Importer.Create(ImportDouble);
-        public static Importer<DateTime>        DateTime         = Importer.Create(ImportDateTime);
-        public static Importer<DateTimeOffset>  DateTimeOffset   = Importer.Create(ImportDateTimeOffset);
-        public static Importer<bool?>           NullableBoolean  = Importer.Create(ImportNullOrBoolean);
-        public static Importer<int?>            NullableInt32    = Importer.Create(ImportNullOrInt32);
-        public static Importer<long?>           NullableInt64    = Importer.Create(ImportNullOrInt64);
-        public static Importer<float?>          NullableSingle   = Importer.Create(ImportNullOrSingle);
-        public static Importer<double?>         NullableDouble   = Importer.Create(ImportNullOrDouble);
-        public static Importer<DateTime?>       NullableDateTime = Importer.Create(ImportNullOrDateTime);
-        public static Importer<DateTimeOffset?> NullableDateTimeOffset =
-                                                                   Importer.Create(ImportNullOrDateTimeOffset);
-        public static Importer<string>          String           = Importer.Create(ImportNullOrString);
-        public static Importer<JsonValue>       JsonValue        = Importer.Create(ImportJsonValue);
-        public static Importer<JsonObject>      JsonObject       = Importer.Create(DeJson.JsonObject.Import);
+        public static JsonImporter<bool>            Boolean          = JsonImporter.Create(ImportBoolean);
+        public static JsonImporter<int>             Int32            = JsonImporter.Create(ImportInt32);
+        public static JsonImporter<long>            Int64            = JsonImporter.Create(ImportInt64);
+        public static JsonImporter<float>           Single           = JsonImporter.Create(ImportSingle);
+        public static JsonImporter<double>          Double           = JsonImporter.Create(ImportDouble);
+        public static JsonImporter<DateTime>        DateTime         = JsonImporter.Create(ImportDateTime);
+        public static JsonImporter<DateTimeOffset>  DateTimeOffset   = JsonImporter.Create(ImportDateTimeOffset);
+        public static JsonImporter<bool?>           NullableBoolean  = JsonImporter.Create(ImportNullOrBoolean);
+        public static JsonImporter<int?>            NullableInt32    = JsonImporter.Create(ImportNullOrInt32);
+        public static JsonImporter<long?>           NullableInt64    = JsonImporter.Create(ImportNullOrInt64);
+        public static JsonImporter<float?>          NullableSingle   = JsonImporter.Create(ImportNullOrSingle);
+        public static JsonImporter<double?>         NullableDouble   = JsonImporter.Create(ImportNullOrDouble);
+        public static JsonImporter<DateTime?>       NullableDateTime = JsonImporter.Create(ImportNullOrDateTime);
+        public static JsonImporter<DateTimeOffset?> NullableDateTimeOffset =
+                                                                   JsonImporter.Create(ImportNullOrDateTimeOffset);
+        public static JsonImporter<string>          String           = JsonImporter.Create(ImportNullOrString);
+        public static JsonImporter<JsonValue>       JsonValue        = JsonImporter.Create(ImportJsonValue);
+        public static JsonImporter<JsonObject>      JsonObject       = JsonImporter.Create(DeJson.JsonObject.Import);
 
         static bool     ImportBoolean(JsonReader reader)    => reader.ReadBoolean();
         static int      ImportInt32(JsonReader reader)      => reader.ReadNumber().ToInt32();

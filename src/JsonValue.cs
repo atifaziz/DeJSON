@@ -56,7 +56,7 @@ namespace DeJson
 
         public override string ToString() => _buffer.ToString();
 
-        public T Import<T>(Importer<T> importer) =>
+        public T Import<T>(JsonImporter<T> importer) =>
             importer.Import(CreateReader());
     }
 }
