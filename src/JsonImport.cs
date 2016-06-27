@@ -41,10 +41,9 @@ namespace DeJson
             else
             {
                 var newArray = prototype.Body as NewArrayExpression;
-                if (newArray == null)
-                    throw new ArgumentException(/* TODO */ null, nameof(prototype));
-                return
-                    (Func<JsonReader, T>) CreateArrayImporter(newArray, mapper);
+                return newArray != null
+                     ? (Func<JsonReader, T>) CreateArrayImporter(newArray, mapper)
+                     : (Func<JsonReader, T>) mapper(prototype.Body.Type);
             }
         }
 

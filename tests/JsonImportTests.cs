@@ -226,5 +226,12 @@ namespace DeJson.Tests
             var e = Assert.Throws<ArgumentException>(() => JsonImport.CreateImporter(() => new { }));
             Assert.That(e.ParamName, Is.EqualTo("prototype"));
         }
+
+        [Test]
+        public void ImportPredefinedViaCreateImporter()
+        {
+            var importer = JsonImport.CreateImporter(() => default(int));
+            Assert.That(importer.Import("42"), Is.EqualTo(42));
+        }
     }
 }
