@@ -61,18 +61,14 @@ namespace DeJson
         {
             var newObject = prototype as NewExpression;
             if (newObject != null)
-            {
-                if (newObject.Members == null)
-                    throw new ArgumentException("Prototype object must have at least one member.", nameof(prototype));
-                return CreateObjectImporter(newObject, newObject.Type, mapper);
-            }
+                return CreateObjectImporter(newObject, newObject.Type, mapper, nameof(prototype));
 
             var newArray = prototype as NewArrayExpression;
             if (newArray != null)
             {
                 var elementType = newArray.Type.GetElementType();
                 var newElement = newArray.Expressions.Cast<NewExpression>().Single();
-                return CreateArrayImporter(elementType, CreateObjectImporter(newElement, elementType, mapper));
+                return CreateArrayImporter(elementType, CreateObjectImporter(newElement, elementType, mapper, nameof(prototype)));
             }
 
             return prototype.Type.IsArray
@@ -80,9 +76,12 @@ namespace DeJson
                  : mapper(prototype.Type);
         }
 
-        static Delegate CreateObjectImporter(NewExpression newExpression, Type type, Func<Type, Delegate> mapper)
+        static Delegate CreateObjectImporter(NewExpression newExpression, Type type, Func<Type, Delegate> mapper, string publicParamName)
         {
-            var properties = (newExpression.Members ?? Enumerable.Empty<MemberInfo>()).Cast<PropertyInfo>().ToArray();
+            if (newExpression.Members == null)
+                throw new ArgumentException("Prototype object must have at least one member.", publicParamName);
+
+            var properties = newExpression.Members.Cast<PropertyInfo>().ToArray();
             var names = from p in properties select p.Name;
             var propertyTypes = properties.Select(p => p.PropertyType).ToArray();
             var paramz = properties.Select(p => Expression.Parameter(p.PropertyType))

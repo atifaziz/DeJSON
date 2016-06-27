@@ -15,6 +15,33 @@ namespace DeJson.Tests
         }
 
         [Test]
+        public void CannotImportObjectWithZeroMembers()
+        {
+            var e = Assert.Throws<ArgumentException>(() => JsonImporter.Create(() => new { }));
+            Assert.That(e.ParamName, Is.EqualTo("prototype"));
+        }
+
+        [Test]
+        public void CannotImportNestedObjectWithZeroMembers()
+        {
+            var e = Assert.Throws<ArgumentException>(() => JsonImporter.Create(() => new
+            {
+                thing = new { }
+            }));
+            Assert.That(e.ParamName, Is.EqualTo("prototype"));
+        }
+
+        [Test]
+        public void CannotImportArrayOfObjectWithZeroMembers()
+        {
+            var e = Assert.Throws<ArgumentException>(() => JsonImporter.Create(() => new[]
+            {
+                new { }
+            }));
+            Assert.That(e.ParamName, Is.EqualTo("prototype"));
+        }
+
+        [Test]
         public void ImportObject()
         {
             var importer = JsonImporter.Create(() => new
@@ -225,13 +252,6 @@ namespace DeJson.Tests
             var obj = importer.Import(@"{ x = 1.23, y = 4.56, }");
 
             Assert.That(obj, Is.EqualTo(new { x = 1.23, y = 4.56 }));
-        }
-
-        [Test]
-        public void CannotImportObjectWithZeroMembers()
-        {
-            var e = Assert.Throws<ArgumentException>(() => JsonImporter.Create(() => new { }));
-            Assert.That(e.ParamName, Is.EqualTo("prototype"));
         }
 
         [Test]
