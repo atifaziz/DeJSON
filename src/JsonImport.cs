@@ -31,10 +31,21 @@ namespace DeJson
         static Func<JsonReader, T> CreateImporter<T>(Expression<Func<T>> prototype, Func<Type, Delegate> mapper)
         {
             if (prototype == null) throw new ArgumentNullException(nameof(prototype));
-            var newExpression = prototype.Body as NewExpression;
-            if (newExpression?.Members == null)
-                throw new ArgumentException(/* TODO */ null, nameof(prototype));
-            return (Func<JsonReader, T>) CreateImporter(newExpression, typeof(T), mapper);
+            var newObject = prototype.Body as NewExpression;
+            if (newObject != null)
+            {
+                if (newObject.Members == null)
+                    throw new ArgumentException(/* TODO */ null, nameof(prototype));
+                return (Func<JsonReader, T>)CreateObjectImporter(newObject, typeof(T), mapper);
+            }
+            else
+            {
+                var newArray = prototype.Body as NewArrayExpression;
+                if (newArray == null)
+                    throw new ArgumentException(/* TODO */ null, nameof(prototype));
+                return
+                    (Func<JsonReader, T>) CreateArrayImporter(newArray, mapper);
+            }
         }
 
         static readonly RuntimeMethodHandle[] CreateImporterMethods =
@@ -48,11 +59,11 @@ namespace DeJson
                 .Select(m => m.MethodHandle)
                 .ToArray();
 
-        static Delegate CreateImporter(NewExpression @new, Type type, Func<Type, Delegate> mapper)
+        static Delegate CreateObjectImporter(NewExpression newExpression, Type type, Func<Type, Delegate> mapper)
         {
-            var properties = (@new.Members ?? Enumerable.Empty<MemberInfo>()).Cast<PropertyInfo>().ToArray();
+            var properties = (newExpression.Members ?? Enumerable.Empty<MemberInfo>()).Cast<PropertyInfo>().ToArray();
             var readers =
-                from p in properties.Zip(@new.Arguments, (prop, arg) => new
+                from p in properties.Zip(newExpression.Arguments, (prop, arg) => new
                 {
                     Property = prop,
                     New      = arg as NewExpression,
@@ -60,9 +71,9 @@ namespace DeJson
                     Const    = arg as ConstantExpression,
                 })
                 select p.New != null
-                     ? CreateImporter(p.New, p.New.Type, mapper)
+                     ? CreateObjectImporter(p.New, p.New.Type, mapper)
                      : p.Array != null
-                     ? CreateArrayImporter(p.Array.Type.GetElementType(), CreateImporter(p.Array.Expressions.Cast<NewExpression>().Single(), p.Array.Type.GetElementType(), mapper))
+                     ? CreateArrayImporter(p.Array, mapper)
                      : p.Const == null
                      ? null // TODO
                      : p.Const.Type.IsArray
@@ -83,7 +94,7 @@ namespace DeJson
             var selectorLambda =
                 Expression.Lambda(lambdaType,
                                   parameters: paramz,
-                                  body: Expression.New(@new.Constructor,
+                                  body: Expression.New(newExpression.Constructor,
                                                        // ReSharper disable once CoVariantArrayConversion
                                                        paramz));
 
@@ -108,6 +119,13 @@ namespace DeJson
                 yield return reader.ReadMember();
             reader.ReadToken(JsonTokenClass.EndObject);
             // TODO consider asserting depth on entry/exit
+        }
+
+        static Delegate CreateArrayImporter(NewArrayExpression newArray, Func<Type, Delegate> mapper)
+        {
+            var elementType = newArray.Type.GetElementType();
+            var newElement = newArray.Expressions.Cast<NewExpression>().Single();
+            return CreateArrayImporter(elementType, CreateObjectImporter(newElement, elementType, mapper));
         }
 
         static readonly MethodInfo CreateArrayImporterGenericMethodDefinition =

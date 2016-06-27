@@ -1,6 +1,7 @@
 namespace DeJson.Tests
 {
     using System;
+    using System.Linq;
     using NUnit.Framework;
 
     [TestFixture]
@@ -104,6 +105,46 @@ namespace DeJson.Tests
             var importer = JsonImporters.Int32.ToArrayImporter();
             var result = importer.Import("[123, 456, 789]");
             Assert.That(result, Is.EquivalentTo(new[] { 123, 456, 789 }));
+        }
+
+        [Test]
+        public void ImportObjectArray()
+        {
+            var importer = JsonImport.CreateImporter(() => new[]
+            {
+                new { x = default(int),
+                      y = default(int) },
+            });
+
+            var pts = importer.Import(@"[
+                { x: 12, y: 23 },
+                { x: 34, y: 45 },
+                { x: 56, y: 67 },
+                { x: 78, y: 89 },
+            ]");
+
+            Assert.That(pts.Length, Is.EqualTo(4));
+
+            using (var pt = pts.AsEnumerable().GetEnumerator())
+            {
+                Assert.That(pt.MoveNext(), Is.True);
+                Assert.That(pt.Current.x, Is.EqualTo(12));
+                Assert.That(pt.Current.y, Is.EqualTo(23));
+
+                Assert.That(pt.MoveNext(), Is.True);
+                Assert.That(pt.Current.x, Is.EqualTo(34));
+                Assert.That(pt.Current.y, Is.EqualTo(45));
+
+                Assert.That(pt.MoveNext(), Is.True);
+                Assert.That(pt.Current.x, Is.EqualTo(56));
+                Assert.That(pt.Current.y, Is.EqualTo(67));
+
+                Assert.That(pt.MoveNext(), Is.True);
+                Assert.That(pt.Current.x, Is.EqualTo(78));
+                Assert.That(pt.Current.y, Is.EqualTo(89));
+
+                Assert.That(pt.MoveNext(), Is.False);
+            }
         }
 
         [Test]
