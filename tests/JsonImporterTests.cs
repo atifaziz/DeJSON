@@ -8,6 +8,13 @@ namespace DeJson.Tests
     public class JsonImporterTests
     {
         [Test]
+        public void CannotCreateWithNullPrototype()
+        {
+            var e = Assert.Throws<ArgumentNullException>(() => JsonImporter.Create<object>(null));
+            Assert.That(e.ParamName, Is.EqualTo("prototype"));
+        }
+
+        [Test]
         public void ImportObject()
         {
             var importer = JsonImporter.Create(() => new

@@ -51,8 +51,11 @@ namespace DeJson
         internal static JsonImporter<T> Create<T>(Func<JsonReader, T> func) =>
             new JsonImporter<T>(func);
 
-        public static JsonImporter<T> Create<T>(Expression<Func<T>> prototype) =>
-            Create((Func<JsonReader, T>)Create(prototype.Body, JsonImporters.Map));
+        public static JsonImporter<T> Create<T>(Expression<Func<T>> prototype)
+        {
+            if (prototype == null) throw new ArgumentNullException(nameof(prototype));
+            return Create((Func<JsonReader, T>) Create(prototype.Body, JsonImporters.Map));
+        }
 
         static Delegate Create(Expression prototype, Func<Type, Delegate> mapper)
         {
