@@ -219,5 +219,12 @@ namespace DeJson.Tests
 
             Assert.That(obj, Is.EqualTo(new { x = 1.23, y = 4.56 }));
         }
+
+        [Test]
+        public void CannotImportObjectWithZeroMembers()
+        {
+            var e = Assert.Throws<ArgumentException>(() => JsonImport.CreateImporter(() => new { }));
+            Assert.That(e.ParamName, Is.EqualTo("prototype"));
+        }
     }
 }

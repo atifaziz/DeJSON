@@ -35,7 +35,7 @@ namespace DeJson
             if (newObject != null)
             {
                 if (newObject.Members == null)
-                    throw new ArgumentException(/* TODO */ null, nameof(prototype));
+                    throw new ArgumentException("Prototype object must have at least one member.", nameof(prototype));
                 return (Func<JsonReader, T>)CreateObjectImporter(newObject, typeof(T), mapper);
             }
             else
