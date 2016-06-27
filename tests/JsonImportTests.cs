@@ -102,7 +102,7 @@ namespace DeJson.Tests
         [Test]
         public void ImportArray()
         {
-            var importer = JsonImporters.Int32.ToArrayImporter();
+            var importer = JsonImport.CreateImporter(() => default(int[]));
             var result = importer.Import("[123, 456, 789]");
             Assert.That(result, Is.EquivalentTo(new[] { 123, 456, 789 }));
         }

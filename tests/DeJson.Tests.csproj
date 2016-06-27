@@ -39,6 +39,7 @@
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ImporterTests.cs" />
     <Compile Include="JsonImportersTests.cs" />
     <Compile Include="JsonImportTests.cs" />
     <Compile Include="JsonObjectTests.cs" />

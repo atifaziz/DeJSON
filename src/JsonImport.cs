@@ -25,28 +25,6 @@ namespace DeJson
 
     public static partial class JsonImport
     {
-        public static Importer<T> CreateImporter<T>(Expression<Func<T>> prototype) =>
-            Importer.Create(CreateImporter(prototype, JsonImporters.Map));
-
-        static Func<JsonReader, T> CreateImporter<T>(Expression<Func<T>> prototype, Func<Type, Delegate> mapper)
-        {
-            if (prototype == null) throw new ArgumentNullException(nameof(prototype));
-            var newObject = prototype.Body as NewExpression;
-            if (newObject != null)
-            {
-                if (newObject.Members == null)
-                    throw new ArgumentException("Prototype object must have at least one member.", nameof(prototype));
-                return (Func<JsonReader, T>)CreateObjectImporter(newObject, typeof(T), mapper);
-            }
-            else
-            {
-                var newArray = prototype.Body as NewArrayExpression;
-                return newArray != null
-                     ? (Func<JsonReader, T>) CreateArrayImporter(newArray, mapper)
-                     : (Func<JsonReader, T>) mapper(prototype.Body.Type);
-            }
-        }
-
         static readonly RuntimeMethodHandle[] CreateImporterMethods =
             typeof(JsonImport)
                 .FindMembers(MemberTypes.Method, BindingFlags.Static | BindingFlags.NonPublic,
@@ -58,26 +36,36 @@ namespace DeJson
                 .Select(m => m.MethodHandle)
                 .ToArray();
 
+        public static Importer<T> CreateImporter<T>(Expression<Func<T>> prototype) =>
+            Importer.Create((Func<JsonReader, T>) CreateImporter(prototype.Body, JsonImporters.Map));
+
+        static Delegate CreateImporter(Expression e, Func<Type, Delegate> mapper, string paramName = "prototype")
+        {
+            var newObject = e as NewExpression;
+            if (newObject != null)
+            {
+                if (newObject.Members == null)
+                    // ReSharper disable once NotResolvedInText
+                    throw new ArgumentException("Prototype object must have at least one member.", paramName);
+                return CreateObjectImporter(newObject, newObject.Type, mapper);
+            }
+
+            var newArray = e as NewArrayExpression;
+            if (newArray != null)
+            {
+                var elementType = newArray.Type.GetElementType();
+                var newElement = newArray.Expressions.Cast<NewExpression>().Single();
+                return CreateArrayImporter(elementType, CreateObjectImporter(newElement, elementType, mapper));
+            }
+
+            return e.Type.IsArray
+                 ? CreateArrayImporter(e.Type.GetElementType(), mapper(e.Type.GetElementType()))
+                 : mapper(e.Type);
+        }
+
         static Delegate CreateObjectImporter(NewExpression newExpression, Type type, Func<Type, Delegate> mapper)
         {
             var properties = (newExpression.Members ?? Enumerable.Empty<MemberInfo>()).Cast<PropertyInfo>().ToArray();
-            var readers =
-                from p in properties.Zip(newExpression.Arguments, (prop, arg) => new
-                {
-                    Type  = prop.PropertyType,
-                    New   = arg as NewExpression,
-                    Array = arg as NewArrayExpression,
-                })
-                select p.New != null
-                     ? CreateObjectImporter(p.New, p.New.Type, mapper)
-                     : p.Array != null
-                     ? CreateArrayImporter(p.Array, mapper)
-                     : p.Type.IsArray
-                     ? CreateArrayImporter(p.Type.GetElementType(), mapper(p.Type.GetElementType()))
-                     : mapper(p.Type);
-
-            readers = readers.ToArray();
-
             var names = from p in properties select p.Name;
             var propertyTypes = properties.Select(p => p.PropertyType).ToArray();
             var paramz = properties.Select(p => Expression.Parameter(p.PropertyType))
@@ -95,12 +83,12 @@ namespace DeJson
                                                        paramz));
 
             var createImporterMethod =
-                ((MethodInfo) MethodBase.GetMethodFromHandle(CreateImporterMethods[lambdaType.GetGenericArguments().Length - 1]))
+                ((MethodInfo) MethodBase.GetMethodFromHandle(CreateImporterMethods[lambdaType.GetGenericArguments().Length - 2]))
                     .MakeGenericMethod(lambdaType.GetGenericArguments());
 
             var args =
                 new object[] { names }
-                    .Concat(readers)
+                    .Concat(from arg in newExpression.Arguments select CreateImporter(arg, mapper))
                     .Concat(new object[] { selectorLambda.Compile() });
 
             return (Delegate) createImporterMethod.Invoke(null, args.ToArray());
@@ -115,13 +103,6 @@ namespace DeJson
                 yield return reader.ReadMember();
             reader.ReadToken(JsonTokenClass.EndObject);
             // TODO consider asserting depth on entry/exit
-        }
-
-        static Delegate CreateArrayImporter(NewArrayExpression newArray, Func<Type, Delegate> mapper)
-        {
-            var elementType = newArray.Type.GetElementType();
-            var newElement = newArray.Expressions.Cast<NewExpression>().Single();
-            return CreateArrayImporter(elementType, CreateObjectImporter(newElement, elementType, mapper));
         }
 
         static readonly MethodInfo CreateArrayImporterGenericMethodDefinition =
