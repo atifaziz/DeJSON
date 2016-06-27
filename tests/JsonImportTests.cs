@@ -205,5 +205,19 @@ namespace DeJson.Tests
             Assert.That(pt.Current.Key, Is.EqualTo("z"));
             Assert.That(pt.Current.Value.Import(JsonImporters.Double), Is.EqualTo(56.78));
         }
+
+        [Test]
+        public void ImportObjectWithNonConstProperties()
+        {
+            var importer = JsonImport.CreateImporter(() => new
+            {
+                x = Math.Cos(0),
+                y = Math.Sin(0),
+            });
+
+            var obj = importer.Import(@"{ x = 1.23, y = 4.56, }");
+
+            Assert.That(obj, Is.EqualTo(new { x = 1.23, y = 4.56 }));
+        }
     }
 }

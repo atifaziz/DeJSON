@@ -65,20 +65,17 @@ namespace DeJson
             var readers =
                 from p in properties.Zip(newExpression.Arguments, (prop, arg) => new
                 {
-                    Property = prop,
-                    New      = arg as NewExpression,
-                    Array    = arg as NewArrayExpression,
-                    Const    = arg as ConstantExpression,
+                    Type  = prop.PropertyType,
+                    New   = arg as NewExpression,
+                    Array = arg as NewArrayExpression,
                 })
                 select p.New != null
                      ? CreateObjectImporter(p.New, p.New.Type, mapper)
                      : p.Array != null
                      ? CreateArrayImporter(p.Array, mapper)
-                     : p.Const == null
-                     ? null // TODO
-                     : p.Const.Type.IsArray
-                     ? CreateArrayImporter(p.Const.Type.GetElementType(), mapper(p.Property.PropertyType.GetElementType()))
-                     : mapper(p.Property.PropertyType);
+                     : p.Type.IsArray
+                     ? CreateArrayImporter(p.Type.GetElementType(), mapper(p.Type.GetElementType()))
+                     : mapper(p.Type);
 
             readers = readers.ToArray();
 
