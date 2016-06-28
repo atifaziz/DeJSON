@@ -17,6 +17,7 @@
 namespace DeJson
 {
     using System;
+    using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Linq;
     using System.Linq.Expressions;
@@ -51,37 +52,40 @@ namespace DeJson
         internal static JsonImporter<T> Create<T>(Func<JsonReader, T> func) =>
             new JsonImporter<T>(func);
 
-        public static JsonImporter<T> Create<T>(Expression<Func<T>> prototype)
+        public static JsonImporter<T> Create<T>(T prototype)
         {
-            if (prototype == null) throw new ArgumentNullException(nameof(prototype));
-            return Create((Func<JsonReader, T>) Create(prototype.Body, JsonImporters.Map));
+            return (JsonImporter<T>) Cache.GetOrAdd(typeof(T),
+                    t => Create((Func<JsonReader, T>)Create(typeof(T), JsonImporters.Map)));
         }
 
-        static Delegate Create(Expression prototype, Func<Type, Delegate> mapper)
-        {
-            var newObject = prototype as NewExpression;
-            if (newObject != null)
-                return CreateObjectImporter(newObject, newObject.Type, mapper, nameof(prototype));
+        static bool LikeAnonymousClass(Type type) =>
+            type.IsNotPublic && type.IsClass && type.IsSealed
+            && type.IsDefined(typeof(System.Runtime.CompilerServices.CompilerGeneratedAttribute), false);
 
-            var newArray = prototype as NewArrayExpression;
-            if (newArray != null)
+        static Delegate Create(Type prototype, Func<Type, Delegate> mapper)
+        {
+            if (LikeAnonymousClass(prototype))
+                return CreateObjectImporter(prototype, mapper, nameof(prototype));
+
+            if (prototype.IsArray && LikeAnonymousClass(prototype.GetElementType()))
             {
-                var elementType = newArray.Type.GetElementType();
-                var newElement = newArray.Expressions.Cast<NewExpression>().Single();
-                return CreateArrayImporter(elementType, CreateObjectImporter(newElement, elementType, mapper, nameof(prototype)));
+                var elementType = prototype.GetElementType();
+                return CreateArrayImporter(elementType, CreateObjectImporter(elementType, mapper, nameof(prototype)));
             }
 
-            return prototype.Type.IsArray
-                 ? CreateArrayImporter(prototype.Type.GetElementType(), mapper(prototype.Type.GetElementType()))
-                 : mapper(prototype.Type);
+            return prototype.IsArray
+                 ? CreateArrayImporter(prototype.GetElementType(), mapper(prototype.GetElementType()))
+                 : mapper(prototype);
         }
 
-        static Delegate CreateObjectImporter(NewExpression newExpression, Type type, Func<Type, Delegate> mapper, string publicParamName)
+        static readonly ConcurrentDictionary<Type, object> Cache = new ConcurrentDictionary<Type, object>();
+
+        static Delegate CreateObjectImporter(Type type, Func<Type, Delegate> mapper, string publicParamName)
         {
-            if (newExpression.Members == null)
+            var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+            if (properties.Length == 0)
                 throw new ArgumentException("Prototype object must have at least one member.", publicParamName);
 
-            var properties = newExpression.Members.Cast<PropertyInfo>().ToArray();
             var names = from p in properties select p.Name;
             var propertyTypes = properties.Select(p => p.PropertyType).ToArray();
             var paramz = properties.Select(p => Expression.Parameter(p.PropertyType))
@@ -91,10 +95,12 @@ namespace DeJson
                 SelectorTypes[properties.Length - 1]
                     .MakeGenericType(propertyTypes.Concat(new[] { type }).ToArray());
 
+            var ctor = type.GetConstructors().Single();
+
             var selectorLambda =
                 Expression.Lambda(lambdaType,
                                   parameters: paramz,
-                                  body: Expression.New(newExpression.Constructor,
+                                  body: Expression.New(ctor,
                                                        // ReSharper disable once CoVariantArrayConversion
                                                        paramz));
 
@@ -104,7 +110,8 @@ namespace DeJson
 
             var args =
                 new object[] { names }
-                    .Concat(from arg in newExpression.Arguments select Create(arg, mapper))
+                    .Concat(from arg in ctor.GetParameters()
+                            select Create(arg.ParameterType, mapper))
                     .Concat(new object[] { selectorLambda.Compile() });
 
             return (Delegate) createImporterMethod.Invoke(null, args.ToArray());
