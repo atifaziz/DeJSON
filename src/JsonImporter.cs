@@ -52,17 +52,15 @@ namespace DeJson
         internal static JsonImporter<T> Create<T>(Func<JsonReader, T> func) =>
             new JsonImporter<T>(func);
 
-        public static JsonImporter<T> Create<T>(T prototype)
-        {
-            return (JsonImporter<T>) Cache.GetOrAdd(typeof(T),
-                    t => Create((Func<JsonReader, T>)Create(typeof(T), JsonImporters.Map)));
-        }
+        public static JsonImporter<T> FromPrototype<T>(T prototype) =>
+            (JsonImporter<T>)
+                Cache.GetOrAdd(typeof(T), t => Create((Func<JsonReader, T>) FromPrototype(typeof(T), JsonImporters.Map)));
 
         static bool LikeAnonymousClass(Type type) =>
             type.IsNotPublic && type.IsClass && type.IsSealed
             && type.IsDefined(typeof(System.Runtime.CompilerServices.CompilerGeneratedAttribute), false);
 
-        static Delegate Create(Type prototype, Func<Type, Delegate> mapper)
+        static Delegate FromPrototype(Type prototype, Func<Type, Delegate> mapper)
         {
             if (LikeAnonymousClass(prototype))
                 return CreateObjectImporter(prototype, mapper, nameof(prototype));
@@ -111,7 +109,7 @@ namespace DeJson
             var args =
                 new object[] { names }
                     .Concat(from arg in ctor.GetParameters()
-                            select Create(arg.ParameterType, mapper))
+                            select FromPrototype(arg.ParameterType, mapper))
                     .Concat(new object[] { selectorLambda.Compile() });
 
             return (Delegate) createImporterMethod.Invoke(null, args.ToArray());

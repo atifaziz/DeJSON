@@ -67,7 +67,7 @@ namespace DeJson
         public static JsonImporter<double?>         NullableDouble   = JsonImporter.Create(ImportNullOrDouble);
         public static JsonImporter<DateTime?>       NullableDateTime = JsonImporter.Create(ImportNullOrDateTime);
         public static JsonImporter<DateTimeOffset?> NullableDateTimeOffset =
-                                                                   JsonImporter.Create(ImportNullOrDateTimeOffset);
+                                                                       JsonImporter.Create(ImportNullOrDateTimeOffset);
         public static JsonImporter<string>          String           = JsonImporter.Create(ImportNullOrString);
         public static JsonImporter<JsonValue>       JsonValue        = JsonImporter.Create(ImportJsonValue);
         public static JsonImporter<JsonObject>      JsonObject       = JsonImporter.Create(DeJson.JsonObject.Import);
