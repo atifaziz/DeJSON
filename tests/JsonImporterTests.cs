@@ -7,24 +7,24 @@ namespace DeJson.Tests
     [TestFixture]
     public class JsonImporterTests
     {
-        [Test]
-        public void CannotCreateWithNullPrototype()
+        [Test, Ignore("N/A")]
+        public void CannotFromPrototypeWithNullPrototype()
         {
-            var e = Assert.Throws<ArgumentNullException>(() => JsonImporter.Create<object>(null));
+            var e = Assert.Throws<ArgumentNullException>(() => JsonImporter.FromPrototype<object>(null));
             Assert.That(e.ParamName, Is.EqualTo("prototype"));
         }
 
         [Test]
         public void CannotImportObjectWithZeroMembers()
         {
-            var e = Assert.Throws<ArgumentException>(() => JsonImporter.Create(() => new { }));
+            var e = Assert.Throws<ArgumentException>(() => JsonImporter.FromPrototype(new { }));
             Assert.That(e.ParamName, Is.EqualTo("prototype"));
         }
 
         [Test]
         public void CannotImportNestedObjectWithZeroMembers()
         {
-            var e = Assert.Throws<ArgumentException>(() => JsonImporter.Create(() => new
+            var e = Assert.Throws<ArgumentException>(() => JsonImporter.FromPrototype(new
             {
                 thing = new { }
             }));
@@ -34,7 +34,7 @@ namespace DeJson.Tests
         [Test]
         public void CannotImportArrayOfObjectWithZeroMembers()
         {
-            var e = Assert.Throws<ArgumentException>(() => JsonImporter.Create(() => new[]
+            var e = Assert.Throws<ArgumentException>(() => JsonImporter.FromPrototype(new[]
             {
                 new { }
             }));
@@ -44,7 +44,7 @@ namespace DeJson.Tests
         [Test]
         public void ImportObject()
         {
-            var importer = JsonImporter.Create(() => new
+            var importer = JsonImporter.FromPrototype(new
             {
                 x     = default(int),
                 y     = default(int?),
@@ -69,7 +69,7 @@ namespace DeJson.Tests
         [Test]
         public void ImportNestedObject()
         {
-            var importer = JsonImporter.Create(() => new
+            var importer = JsonImporter.FromPrototype(new
             {
                 pt = new
                 {
@@ -97,7 +97,7 @@ namespace DeJson.Tests
         [Test]
         public void ImportNestedArrays()
         {
-            var importer = JsonImporter.Create(() => new
+            var importer = JsonImporter.FromPrototype(new
             {
                 xs = default(int[]),
                 tags = default(string[])
@@ -110,7 +110,7 @@ namespace DeJson.Tests
         [Test]
         public void ImportNestedObjectArray()
         {
-            var importer = JsonImporter.Create(() => new
+            var importer = JsonImporter.FromPrototype(new
             {
                 points = new[] { new { x = default(int), y = default(int) } },
             });
@@ -136,7 +136,7 @@ namespace DeJson.Tests
         [Test]
         public void ImportArray()
         {
-            var importer = JsonImporter.Create(() => default(int[]));
+            var importer = JsonImporter.FromPrototype(default(int[]));
             var result = importer.Import("[123, 456, 789]");
             Assert.That(result, Is.EquivalentTo(new[] { 123, 456, 789 }));
         }
@@ -144,7 +144,7 @@ namespace DeJson.Tests
         [Test]
         public void ImportObjectArray()
         {
-            var importer = JsonImporter.Create(() => new[]
+            var importer = JsonImporter.FromPrototype(new[]
             {
                 new { x = default(int),
                       y = default(int) },
@@ -184,7 +184,7 @@ namespace DeJson.Tests
         [Test]
         public void ImportJson()
         {
-            var importer = JsonImporter.Create(() => new
+            var importer = JsonImporter.FromPrototype(new
             {
                 pt = default(JsonValue),
                 label = default(string),
@@ -194,7 +194,7 @@ namespace DeJson.Tests
 
             Assert.That(obj.label, Is.EqualTo("foobar"));
 
-            var pointImporter = JsonImporter.Create(() => new
+            var pointImporter = JsonImporter.FromPrototype(new
             {
                 x = default(int),
                 y = default(int?),
@@ -214,7 +214,7 @@ namespace DeJson.Tests
         [Test]
         public void ImportJsonObject()
         {
-            var importer = JsonImporter.Create(() => new
+            var importer = JsonImporter.FromPrototype(new
             {
                 pt = default(JsonObject),
                 label = default(string),
@@ -243,7 +243,7 @@ namespace DeJson.Tests
         [Test]
         public void ImportObjectWithNonConstProperties()
         {
-            var importer = JsonImporter.Create(() => new
+            var importer = JsonImporter.FromPrototype(new
             {
                 x = Math.Cos(0),
                 y = Math.Sin(0),
@@ -255,9 +255,9 @@ namespace DeJson.Tests
         }
 
         [Test]
-        public void ImportPredefinedViaCreateImporter()
+        public void FromPrototypeWithPredefined()
         {
-            var importer = JsonImporter.Create(() => default(int));
+            var importer = JsonImporter.FromPrototype(default(int));
             Assert.That(importer.Import("42"), Is.EqualTo(42));
         }
 
