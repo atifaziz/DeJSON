@@ -58,7 +58,7 @@ namespace DeJson
         internal static JsonObject Import(JsonReader reader)
         {
             if (!reader.MoveToContent())
-                throw new Exception(/* TODO */);
+                throw new Exception("Found EOF where a JSON Object was expected.");
             if (reader.TokenClass == JsonTokenClass.Null)
             {
                 reader.ReadNull();
